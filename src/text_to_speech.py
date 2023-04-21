@@ -14,7 +14,7 @@ class GermanNeuralVoices(Enum):
 
 def generate_neural_speech(
     utf_8_str: str,
-    voice: Enum = FrenchNeuralVoices.LEA,
+    voice: Enum = GermanNeuralVoices.VICKI,
 ):
     client = boto3.client("polly")
     res = client.synthesize_speech(
