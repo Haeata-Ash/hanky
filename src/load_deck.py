@@ -9,7 +9,7 @@ from src.LanguageModel import (
     get_language_model,
 )
 from src.NoteBuilder import NoteBuilder
-from src.text_to_speech import GermanNeuralVoices, generate_neural_speech
+from src.text_to_speech import generate_neural_speech
 
 
 def load_lang_deck(in_csv: str, collection: Collection, deck_name: str, voice: str):
@@ -17,6 +17,7 @@ def load_lang_deck(in_csv: str, collection: Collection, deck_name: str, voice: s
     collection.save()
     lang_model = get_language_model(collection)
     df = pandas.read_excel(in_csv)
+    last_card_was_added = True
     for index, row in df.iterrows():
         if TARGET_LANG not in row:
             raise Exception(
@@ -34,10 +35,16 @@ def load_lang_deck(in_csv: str, collection: Collection, deck_name: str, voice: s
             if card.did == deck.id:
                 existing_in_deck.append(card)
         if len(existing_in_deck) >= 1:
+            last_card_was_added = False
             print(
                 f"Skipping: {row[SOURCE_LANG]}, card with matching target lang already exists"
             )
         else:
+            if not last_card_was_added:
+                check = input("Are you sure you want this card to be added (y/n):\n")
+                if check != "y":
+                    continue
+            last_card_was_added = True
             print(f"Adding new note: {row[SOURCE_LANG]}")
             nbuilder = NoteBuilder(SOURCE_LANG, lang_model, deck_name, collection)
             nbuilder.set_field(TARGET_LANG, row[TARGET_LANG].replace(",", "<br>"))
@@ -59,6 +66,7 @@ def load_conj_deck(in_csv: str, collection: Collection, deck_name: str, voice: s
     collection.save()
     conj_model = conjugation_model(collection)
     df = pandas.read_excel(in_csv)
+    last_card_was_added = True
     for index, row in df.iterrows():
         if TARGET_LANG not in row:
             raise Exception(
@@ -76,11 +84,16 @@ def load_conj_deck(in_csv: str, collection: Collection, deck_name: str, voice: s
             if card.did == deck.id:
                 existing_in_deck.append(card)
         if len(existing_in_deck) >= 1:
+            last_card_was_added = False
             print(
                 f"Skipping: {row[SOURCE_LANG]}, card with matching target lang already exists"
             )
-
         else:
+            if not last_card_was_added:
+                check = input("Are you sure you want this card to be added (y/n):\n")
+                if check != "y":
+                    continue
+            last_card_was_added = True
             print(f"Adding new note: {row[TARGET_LANG]}")
             nbuilder = NoteBuilder(SOURCE_LANG, conj_model, deck_name, collection)
             nbuilder.set_field(TARGET_LANG, row[TARGET_LANG].replace(",", "<br>"))
