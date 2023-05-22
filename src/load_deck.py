@@ -41,7 +41,9 @@ def load_lang_deck(in_csv: str, collection: Collection, deck_name: str, voice: s
             )
         else:
             if not last_card_was_added:
-                check = input("Are you sure you want this card to be added (y/n):\n")
+                check = input(
+                    f"Are you sure you want '{row[SOURCE_LANG]}' to be added (y/n):\n"
+                )
                 if check != "y":
                     continue
             last_card_was_added = True
@@ -90,7 +92,9 @@ def load_conj_deck(in_csv: str, collection: Collection, deck_name: str, voice: s
             )
         else:
             if not last_card_was_added:
-                check = input("Are you sure you want this card to be added (y/n):\n")
+                check = input(
+                    f"Are you sure you want '{row[SOURCE_LANG]}' to be added (y/n):\n"
+                )
                 if check != "y":
                     continue
             last_card_was_added = True
