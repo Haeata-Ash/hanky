@@ -11,7 +11,6 @@ from src.LanguageModel import (
 from src.NoteBuilder import NoteBuilder
 from src.text_to_speech import generate_neural_speech
 
-
 def load_lang_deck(in_csv: str, collection: Collection, deck_name: str, voice: str):
     deck = collection.decks.add_normal_deck_with_name(deck_name)
     collection.save()

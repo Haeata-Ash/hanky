@@ -29,6 +29,7 @@ if __name__ == "__main__":
             if args.model == "lang-understand":
                 load_lang_deck(args.infile, collection, args.deck_name, voice)
             elif args.model == "lang-recall":
+                # print(args.infile)
                 load_conj_deck(args.infile, collection, args.deck_name, voice)
 
         else:
