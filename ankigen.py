@@ -1,5 +1,5 @@
 from os import path
-import yaml
+import tomllib
 from anki.collection import Collection
 from src.cml import make_parser
 from src.load_deck import load_conj_deck, load_lang_deck
@@ -11,8 +11,8 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     conf = {}
-    with open(args.config, "r") as f:
-        conf = yaml.safe_load(f)
+    with open(args.config, "rb") as f:
+        conf = tomllib.load(f)
         conf["database"] = path.expanduser(conf["database"])
 
     collection = Collection(conf["database"])

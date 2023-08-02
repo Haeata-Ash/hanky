@@ -1,15 +1,21 @@
 # hanki
 Tool to create and update Anki Decks for language learning
 
-
-## Setup
+## Dependencies
 
 This tool requires anki has been installed.
 
 To install the python requirements, run `pip install -r requirements.txt` at the root of the project.
 
-A yaml config file with must be provided with the path to the anki database (collection) file. On my computer (mac) it is located at `~/Library/Application Support/Anki2/User 1/collection.anki2`. If no path to a config file is given to the cli, it is assumed that there is a config file named `config.yaml` present at the root of this project. An example config file has been provided.
+## Configuration
+A toml config file must be provided with the path to the anki database (collection) file. The default config location is `config.toml` at the root of the project directory. As an alernative a path can be provided as a cml option.
+```
+database = '~/Path/To/Anki2/collection.anki2'
+```
 
+On mac os it is located at `~/Library/Application Support/Anki2/User 1/collection.anki2`. 
+
+## Text to Speech
 This tool requires an aws account and account credentials to be used. It uses the aws service [Amazon Polly](https://aws.amazon.com/polly/). You will need to create an aws account and setup the [aws cli](https://docs.aws.amazon.com/cli/latest/userguide/cli-chap-welcome.html) (the credentials will be used to interact with the aws api via the boto3 library). AWS Polly provideds millions of characters per month free so for a single user, no cost should be incurred when making cards.
 
 ## Usage

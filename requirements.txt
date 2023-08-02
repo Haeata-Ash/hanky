@@ -3,4 +3,3 @@ pandas
 openpyxl
 pycryptodome
 boto3
-PyYAML
