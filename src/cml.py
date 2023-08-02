@@ -10,7 +10,7 @@ def make_parser():
         dest="config",
         nargs="?",
         help="Path to yaml config file.",
-        default="config.yaml",
+        default="config.toml",
     )
     parser.add_argument(
         "--deck-name",
