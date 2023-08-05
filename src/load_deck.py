@@ -1,6 +1,7 @@
 from anki.collection import Collection
 from Crypto.Hash import SHA256
 import pandas
+
 from src.LanguageModel import (
     SOURCE_LANG,
     TARGET_LANG,
@@ -89,7 +90,7 @@ def load_conj_deck(in_csv: str, collection: Collection, deck_name: str, voice: s
         if len(existing_in_deck) >= 1:
             last_card_was_added = False
             print(
-                f"Skipping: {row[SOURCE_LANG]}, card with matching target lang already exists\n"
+                f"Skipping: {row[SOURCE_LANG]}, card with matching target lang already exists"
             )
         else:
             if not last_card_was_added:
@@ -121,6 +122,6 @@ def load_conj_deck(in_csv: str, collection: Collection, deck_name: str, voice: s
     collection.save()
 
     if len(csv_to_delete):
-        for index in csv_to_delete:
-            df.drop(index=index)
+        df = df.drop(csv_to_delete)
+
     df.to_excel(in_csv, columns=[SOURCE_LANG, TARGET_LANG], index=False)
