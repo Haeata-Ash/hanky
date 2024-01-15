@@ -28,7 +28,7 @@ def make_parser():
     parser.add_argument(
         "--lang",
         dest="lang",
-        choices=["German", "French"],
+        choices=["German", "French", "Italian"],
         help="The language for which to generate speech.",
     )
     parser.add_argument("-i", dest="infile", help="Path to the question csv")

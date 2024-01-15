@@ -3,7 +3,11 @@ import tomllib
 from anki.collection import Collection
 from src.cml import make_parser
 from src.load_deck import load_conj_deck, load_lang_deck
-from src.text_to_speech import FrenchNeuralVoices, GermanNeuralVoices
+from src.text_to_speech import (
+    FrenchNeuralVoices,
+    GermanNeuralVoices,
+    ItalianNeuralVoices,
+)
 
 
 if __name__ == "__main__":
@@ -26,6 +30,8 @@ if __name__ == "__main__":
                 voice = GermanNeuralVoices.VICKI
             elif lang == "French":
                 voice = FrenchNeuralVoices.LEA
+            elif lang == "Italian":
+                voice = ItalianNeuralVoices.Bianca
             if args.model == "lang-understand":
                 load_lang_deck(args.infile, collection, args.deck_name, voice)
             elif args.model == "lang-recall":

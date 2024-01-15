@@ -12,6 +12,10 @@ class GermanNeuralVoices(Enum):
     VICKI = "Vicki"
 
 
+class ItalianNeuralVoices(Enum):
+    Bianca = "Bianca"
+
+
 def generate_neural_speech(
     utf_8_str: str,
     voice: Enum = GermanNeuralVoices.VICKI,

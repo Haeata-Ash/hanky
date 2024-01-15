@@ -90,12 +90,20 @@ def load_conj_deck(in_csv: str, collection: Collection, deck_name: str, voice: s
         if len(existing_in_deck) >= 1:
             last_card_was_added = False
             print(
-                f"Skipping: {row[SOURCE_LANG]}, card with matching target lang already exists"
+                f"""Skipping: {row[SOURCE_LANG]}, 
+                card with matching target lang already exists"""
             )
         else:
             if not last_card_was_added:
                 check = input(
-                    f"\nNew Card: What would you like to do with '{row[SOURCE_LANG]}'?\n\n(a): Add the card and the cards immediately afterwards.\n(s): Skip the card.\n(d): Delete the card from csv (d).\n\n(a/s/d): "
+                    f"""
+                    \nNew Card: What would you like to do with '{row[SOURCE_LANG]}'?
+                    \n\n
+                    (a): Add the card and the cards immediately afterwards.\n
+                    (s): Skip the card.\n
+                    (d): Delete the card from csv.
+                    \n\n(a/s/d): 
+                    """
                 )
                 if check == "a":
                     pass
