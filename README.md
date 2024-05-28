@@ -1,36 +1,33 @@
 # hanki
-Tool to create and update Anki Decks for language learning
 
-## Dependencies
+[![Hatch project](https://img.shields.io/badge/%F0%9F%A5%9A-Hatch-4051b5.svg)](https://github.com/pypa/hatch)
 
-This tool requires anki has been installed.
+Library and command line application for loading flash cards into anki.
 
-To install the python requirements, run `pip install -r requirements.txt` at the root of the project.
+
+## Installation
+
+
 
 ## Configuration
-A toml config file must be provided with the path to the anki database (collection) file. The default config location is `config.toml` at the root of the project directory. As an alernative a path can be provided as a cml option.
+
+Currently two configuration options are exposed:
+
+`ANKI_DATABASE`: tells hanki where to find the anki collection (an sqlite where anki stores flash cards and other data). The normal system locations at the time of writing are as follows:
+- MAC OS: `~/Library/Application Support/Anki2/User 1/collection.anki2`
+- Linux: `~/.local/share/Anki2/User 1/collection.anki2`
+
+
+`DATABASE_SAFETY_CHECK`: a boolean which when set to `true` will check for any running processes using the anki collection. **Strongly recommended that this is set to `true` as using the database as the same time as the graphical app can cause database corruption**
+
+```toml
+
+# where to find the anki collection (sqlite db where anki stores data)
+# Usual system lo
+ANKI_DATABASE = "~/.local/share/Anki2/User 1/collection.anki2"
+
+# whether or not to check for other processes using the anki database
+DATABASE_SAFETY_CHECK = true
 ```
-database = '~/Path/To/Anki2/collection.anki2'
-```
 
-On mac os it is located at `~/Library/Application Support/Anki2/User 1/collection.anki2`. 
 
-## Text to Speech
-This tool requires an aws account and account credentials to be used. It uses the aws service [Amazon Polly](https://aws.amazon.com/polly/). You will need to create an aws account and setup the [aws cli](https://docs.aws.amazon.com/cli/latest/userguide/cli-chap-welcome.html) (the credentials will be used to interact with the aws api via the boto3 library). AWS Polly provideds millions of characters per month free so for a single user, no cost should be incurred when making cards.
-
-## Usage
-**Warning:** This tool should not be used while anki is running on the same computer (it will throw an exception if you try) due to possible damage to database (although unlikely)
-
-There are two available models:
-
-*CONJUGATION_MODEL* -> This model places the source lang on the front of the card and the target languages speech and text on the back. Only one card is created for a given note using this model.
-
-*LANGUAGE_MODEL* -> This model creates two cards per note. One card has the only the target lang speech, with the target and source lang text on the back, while the other has the source lang text on the front and the target lang speech and text on the back.
-
-Using the *CONJUGATION_MODEL*:
-`python3 ankigen.py --deck-name "MyGermanDeck" --model lang-recall --lang German -i "~/Path/To/Excel/Spreadsheet/ExampleGermanSpreadsheet.xlsx"`
-
-Using the *LANGUAGE_MODEL*:
-`python3 ankigen.py --deck-name "French::Phrases" --model lang-understand --lang French -i "Phrases.xlsx"`
-
-An example spreadsheet has been provided.
