@@ -28,7 +28,8 @@ Currently two configuration options are exposed:
         - `~/.local/share/Anki2/User 1/collection.anki2`
 
 - `DATABASE_SAFETY_CHECK`: a boolean which when set to `true` will check for any running processes using the anki collection.
-    - > **Warning**  Setting this option to false will disable checks for other processes using the anki collection database, which may result in database corruption. Always ensure your anki is backed up.
+    > [!CAUTION]  
+    > Setting this option to false will disable checks for other processes using the anki collection database, which may result in database corruption. Always ensure your anki is backed up.
 
 Example configuration:
 
