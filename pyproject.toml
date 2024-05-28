@@ -1,0 +1,25 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+
+[project]
+name = "hanki"
+version = "0.0.1"
+authors = [
+  { name="chouette", email="hanki-pypi.8ebs0@simplelogin.com" },
+]
+description = "A simple library and command line tool for loading flash cards into anki."
+readme = "README.md"
+requires-python = ">=3.8"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Environment :: Console",
+    "Development Status :: 3 - Alpha",
+    "Operating System :: Unix"
+]
+
+[project.urls]
+Homepage = "https://github.com/pypa/sampleproject"
+Issues = "https://github.com/pypa/sampleproject/issues"

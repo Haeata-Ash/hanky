@@ -27,7 +27,7 @@ class Voice(ABC):
 
     @property
     def languages(self) -> List[Language]:
-        """Return the list of available langauges"""
+        """Return the list of available langauges for this voice"""
         return self._langs
 
     @property
@@ -62,18 +62,18 @@ class AWSPollyVoice(Voice):
 
         super().__init__(languages, voice_id)
 
-    def from_boto_description(boto_response: dict) -> AWSPollyVoice:
+    def from_boto_voice_response(boto_response: dict) -> AWSPollyVoice:
         """Create a AWSPollyVoice from the response of the boto3 polly clients describe_voices method.
         See https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/polly/client/describe_voices.html
         for more info"""
         pass
 
     @property
-    def default_lang(self):
+    def default_lang(self) -> Language:
         return self._default_lang
 
     @property
-    def engines(self):
+    def engines(self) -> List[str]:
         """Return a list of available engines for this voice. An engine can be one of
         'standard'|'neural'|'long-form'
         """

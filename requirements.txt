@@ -1,5 +1,1 @@
 anki
-pandas
-openpyxl
-pycryptodome
-boto3
