@@ -7,7 +7,13 @@ Library and command line application for loading flash cards into anki.
 
 ## Installation
 
+Install via pip:
 
+`pip install hanki`
+
+Optionally install text to speech code seen in tutorial:
+
+` pip install hanki[toc]`
 
 ## Configuration
 
