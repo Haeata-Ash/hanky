@@ -4,7 +4,7 @@
 
 Library and command line application for loading flash cards into anki.
 
-> **:information_source: Note**
+> **:information_source: Note:**
 > This project is currently in alpha and is not stable.
 
 ## Installation
@@ -28,7 +28,7 @@ Currently two configuration options are exposed:
         - `~/.local/share/Anki2/User 1/collection.anki2`
 
 - `DATABASE_SAFETY_CHECK`: a boolean which when set to `true` will check for any running processes using the anki collection.
-    > **:warning: Caution** 
+    > **:warning: Caution:** 
     > Setting this option to false will disable checks for other processes using the anki collection database, which may result in database corruption. Always ensure your anki is backed up.
 
 Example configuration:
