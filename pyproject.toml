@@ -1,0 +1,57 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "hanky"
+authors = [{ name = "HBA", email = "hanky-pypi.8ebs0@simplelogin.com" }]
+description = "Simple library and command line tool for loading flash cards into anki."
+readme = "README.md"
+requires-python = ">=3.8"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Environment :: Console",
+    "Operating System :: Unix",
+]
+
+keywords = ["anki"]
+dynamic = ["version"]
+
+dependencies = [
+  "anki",
+  "psutil"
+]
+
+[project.optional-dependencies]
+# tos = [
+#   "boto3"
+# ]
+
+dev = [
+  "pytest",
+  "mypy"
+]
+
+[project.urls]
+Homepage = "https://github.com/Haeata-Ash/hanky"
+Issues = "https://github.com/Haeata-Ash/hanky/issues"
+
+[tool]
+
+[tool.hatch.version]
+path = "src/hanky/__about__.py"
+
+[tool.hatch.build.targets.sdist]
+exclude = [
+  "/.github",
+  "/docs",
+  "/tests",
+  "/.venv",
+  "/.mypy_cache",
+  "/demo.py",
+  "/.*"
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/hanky"]
