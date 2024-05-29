@@ -97,7 +97,7 @@ def make_parser():
     parser.add_argument(
         "--config",
         dest="config",
-        help="Path to hanky json configuration file",
+        help="Path to hanky toml configuration file",
     )
 
     op_parser = parser.add_subparsers(
@@ -106,7 +106,7 @@ def make_parser():
         required = True
     )
     load_file = op_parser.add_parser(
-        "load-deck",
+        "load",
         help="Load cards into an anki deck from a file"
     )
     load_file.add_argument(
@@ -120,7 +120,7 @@ def make_parser():
     load_file.add_argument("--args", dest="args", default={}, nargs="*", action=KeyValueArg, help="Key value arguments to pass to registered transformers.")
 
     load_dir = op_parser.add_parser(
-        "load",
+        "load-dir",
         help="Load cards into anki deck(s) from files in a directory, using the filenames as deck names."
     )
     load_dir.add_argument("-r", "--recursive", dest="is_rec", action="store_true", default=False, help="If loading files from a directory, recursively load from files in sub directories as well.")

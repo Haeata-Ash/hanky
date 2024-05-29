@@ -72,7 +72,7 @@ class Hanky:
         if args.config:
             self.config.from_file(args.config, toml_load)
 
-        if args.operation == "load-deck":
+        if args.operation == "load":
             self.load_deck(
                 args.file,
                 args.model,
@@ -80,7 +80,7 @@ class Hanky:
                 **(args.args) if args.args else {},
             )
 
-        elif args.operation == "load":
+        elif args.operation == "load-dir":
             self.load_dir(
                 args.model,
                 args.dir,
