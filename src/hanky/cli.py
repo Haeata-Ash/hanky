@@ -3,14 +3,14 @@ import argparse
 
 # def make_parser():
 #     parser = argparse.ArgumentParser(
-#         "hanki",
+#         "hanky",
 #         description="Simple program to allow programatic management of anki cards",
 #     )
 #     parser.add_argument(
 #         "--config",
 #         dest="config",
 #         nargs=1,
-#         help="Path to hanki json configuration file",
+#         help="Path to hanky json configuration file",
 #     )
 
 
@@ -91,13 +91,13 @@ class KeyValueArg(argparse.Action):
 
 def make_parser():
     parser = argparse.ArgumentParser(
-        "hanki",
+        "hanky",
         description="Simple program to allow programatic management of anki cards",
     )
     parser.add_argument(
         "--config",
         dest="config",
-        help="Path to hanki json configuration file",
+        help="Path to hanky json configuration file",
     )
 
     op_parser = parser.add_subparsers(

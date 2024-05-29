@@ -1,4 +1,4 @@
-# hanki
+# hanky
 
 [![Hatch project](https://img.shields.io/badge/%F0%9F%A5%9A-Hatch-4051b5.svg)](https://github.com/pypa/hatch)
 
@@ -11,17 +11,17 @@ Library and command line application for loading flash cards into anki.
 
 Install via pip:
 
-`pip install hanki`
+`pip install hanky`
 
 Optionally install text to speech code seen in tutorial:
 
-` pip install hanki[toc]`
+` pip install hanky[toc]`
 
 ## Configuration
 
 Currently two configuration options are exposed:
 
-- `anki_database`: tells hanki where to find the anki collection (an sqlite database where anki stores flash cards and other data). The normal locations at the time of writing are as follows:
+- `anki_database`: tells hanky where to find the anki collection (an sqlite database where anki stores flash cards and other data). The normal locations at the time of writing are as follows:
     - MAC OS
         - `~/Library/Application Support/Anki2/User 1/collection.anki2`
     - Linux
@@ -49,7 +49,7 @@ allow_duplicates = false
 
 ## Usage 
 
-Hanki can be used as both a command line application and a library. 
+Hanky can be used as both a command line application and a library. 
 
 - If you want to do something more complex than simply adding cards directly from files, such as generating speech, querying an api or performing other operations at runtime, see the [Library Tutorial](#library-tutorial)
 
@@ -60,13 +60,13 @@ Hanki can be used as both a command line application and a library.
 
 ## Command Line Usage
 
-Hanki can be used out of the box as a command line application. If running your own hanki script, omit the `-m` seen in the below examples.
+Hanky can be used out of the box as a command line application. If running your own hanky script, omit the `-m` seen in the below examples.
 
 ### Recursively load decks from files in a folder
 
 Recursively load all csv files as decks of cards using the 'basic' anki model/note type. The relative path from the specified folder will be used as the deck name.
 
-`python3 -m hanki load "basic" "~/french/" "*.csv" -r`
+`python3 -m hanky load "basic" "~/french/" "*.csv" -r`
 
 For example, given the following folder structure:
 ```
@@ -100,7 +100,7 @@ french
 
 Load all csv files in a folder as decks of cards using the 'basic' anki model/note type. The relative path from the specified folder will be used as the deck name.
 
-`python3 -m hanki load "basic" "~/french/" "*.csv"`
+`python3 -m hanky load "basic" "~/french/" "*.csv"`
 
 For example, given the following folder structure:
 ```
@@ -130,7 +130,7 @@ french
 
 Load a single deck using the 'basic' anki model/note type from a file
 
-`python3 -m hanki load-deck "basic" ~/my-folder/countries.csv`
+`python3 -m hanky load-deck "basic" ~/my-folder/countries.csv`
 
 The following deck will be created:
 - `countries`

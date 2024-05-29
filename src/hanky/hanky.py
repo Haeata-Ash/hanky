@@ -6,16 +6,16 @@ from typing import Callable, Generator, Iterator, List, Union
 from anki.collection import Collection, SearchNode
 from tomllib import load as toml_load
 
-from hanki.cli import make_parser
-from hanki.config import (
+from hanky.cli import make_parser
+from hanky.config import (
     ALLOW_DUPLICATES,
     ANKI_DB_PATH,
     DEFAULT_CONFIG,
     DO_SAFET_CHECK,
     Config,
 )
-from hanki.fs import DEFAULT_LOADERS, has_handle, read_file
-from hanki.media import is_audio_ext, make_anki_sound_ref
+from hanky.fs import DEFAULT_LOADERS, has_handle, read_file
+from hanky.media import is_audio_ext, make_anki_sound_ref
 
 
 class ModelProcessor:
@@ -52,7 +52,7 @@ class ModelProcessor:
         return ret
 
 
-class Hanki:
+class Hanky:
     def __init__(self, **kwargs):
         # set default config and then overwrite with config object provided via constructor
         # ensures default keys are present
@@ -107,7 +107,7 @@ class Hanki:
             if self.config[DO_SAFET_CHECK]:
                 if has_handle(self.config[ANKI_DB_PATH]):
                     raise RuntimeError(
-                        """At least one other process is using the anki database. Ensure the Anki application is closed before using Hanki to avoid possible corruption."""
+                        """At least one other process is using the anki database. Ensure the Anki application is closed before using Hanky to avoid possible corruption."""
                     )
 
             self._col = Collection(db_path)
@@ -124,12 +124,12 @@ class Hanki:
         model = self.col.models.by_name(model_name)
         if not model:
             raise ValueError(
-                f"Model '{model_name}' does not exist in your anki collection. Ensure it has been added before using it with hanki."
+                f"Model '{model_name}' does not exist in your anki collection. Ensure it has been added before using it with hanky."
             )
         deck_id = self.col.decks.id(deck_name, create=False)
         if not deck_id:
             ValueError(
-                f"Deck '{deck_name}' does not exist in your anki collection. Ensure it has been created before using it with hanki."
+                f"Deck '{deck_name}' does not exist in your anki collection. Ensure it has been created before using it with hanky."
             )
         expected_fields = self.col.models.field_names(model)
         for k in expected_fields:
@@ -228,7 +228,7 @@ class Hanki:
         model = self.col.models.by_name(model_name)
         if not model:
             raise KeyError(
-                f"Model '{model_name}' does not exist in your anki collection. Ensure it has been added before using it with hanki."
+                f"Model '{model_name}' does not exist in your anki collection. Ensure it has been added before using it with hanky."
             )
 
         # deck is the specified name or filename without extension

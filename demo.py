@@ -1,4 +1,4 @@
-from hanki import Hanki
+from hanky import Hanky
 import boto3
 
 
@@ -16,10 +16,10 @@ def generate_neural_speech(
     return res["AudioStream"].read()
 
 
-hanki = Hanki(anki_database="~/.local/share/Anki2/TestUser/collection.anki2")
+hanky = Hanky(anki_database="~/.local/share/Anki2/TestUser/collection.anki2")
 
 
-@hanki.card_processor(
+@hanky.card_processor(
     "lang-vocab", expected_args=["lang"], expected_fields=["Front", "Back"]
 )
 def lang_model(card: dict, lang):
@@ -34,15 +34,15 @@ def lang_model(card: dict, lang):
     else:
         raise Exception("Unkown language.")
     
-    front_speech_ref = hanki.add_media(front_speech, file_ext=".mp3")
-    back_speech_ref = hanki.add_media(back_speech, file_ext=".mp3")
+    front_speech_ref = hanky.add_media(front_speech, file_ext=".mp3")
+    back_speech_ref = hanky.add_media(back_speech, file_ext=".mp3")
 
     card["front-speech"] = front_speech_ref
     card["back-speech"] = back_speech_ref
     return card
 
 
-hanki.run()
+hanky.run()
 
 # Usage: python3 demo.py load-deck "lang-vocab" ~/french/bodies.csv --args lang=french
 

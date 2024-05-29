@@ -34,7 +34,7 @@ class Config(dict):
 
     def __init__(self, **kwargs):
         self._config = None
-        self.default_path = Path("~/.config/hanki/hanki.toml").expanduser()
+        self.default_path = Path("~/.config/hanky/hanky.toml").expanduser()
         super().__init__(kwargs)
 
     def from_file(
