@@ -1,6 +1,5 @@
-from .cli import make_parser
-from .hanki import Hanki
+from hanki import Hanki
 
-parser = make_parser()
-
-hanki = Hanki()
+if __name__ == "__main__":
+    hanki = Hanki()
+    hanki.run()

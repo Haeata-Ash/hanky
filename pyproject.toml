@@ -12,16 +12,21 @@ classifiers = [
     "Programming Language :: Python :: 3",
     "License :: OSI Approved :: MIT License",
     "Environment :: Console",
-    "Development Status :: 3 - Alpha",
     "Operating System :: Unix",
 ]
+
 keywords = ["anki"]
 dynamic = ["version"]
 
-[project.optional-dependencies]
-tos = [
-  "boto3"
+dependencies = [
+  "anki",
+  "psutil"
 ]
+
+[project.optional-dependencies]
+# tos = [
+#   "boto3"
+# ]
 
 dev = [
   "pytest",
@@ -36,3 +41,15 @@ Issues = "https://github.com/Haeata-Ash/hanki/issues"
 
 [tool.hatch.version]
 path = "src/hanki/__about__.py"
+
+[tool.hatch.build.targets.sdist]
+exclude = [
+  "/.github",
+  "/docs",
+  "/tests",
+  "/.venv",
+  "/.mypy_cache"
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/hanki"]

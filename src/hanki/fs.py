@@ -2,6 +2,7 @@ from typing import Generator, Iterator, Union, TextIO, Callable
 from pathlib import Path
 import json
 import csv
+import psutil
 
 
 def read_file(
@@ -16,3 +17,19 @@ def read_file(
 
 
 DEFAULT_LOADERS = {".json": json.load, ".csv": csv.DictReader}
+
+
+
+
+def has_handle(fpath):
+    fpath = Path(fpath).expanduser().absolute()
+    for proc in psutil.process_iter():
+        try:
+            for item in proc.open_files():
+                if str(fpath) == str(item.path):
+                    return True
+        except psutil.Error: 
+            pass
+
+    return False
+

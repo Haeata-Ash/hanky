@@ -85,6 +85,7 @@ class KeyValueArg(argparse.Action):
         setattr(namespace, self.dest, dict())
 
         for v in values:
+            print(v)
             key, value = v.split("=")
             getattr(namespace, self.dest)[key] = value
 
@@ -98,6 +99,7 @@ def make_parser():
         dest="config",
         help="Path to hanki json configuration file",
     )
+
     op_parser = parser.add_subparsers(
         dest = "operation",
         help="Type of operation to perform",
@@ -115,7 +117,7 @@ def make_parser():
 
 
     load_file.add_argument("-d", "--deck", dest="deck", default=None, help="Name of the deck to load cards into. If not specified, defaults to the filename without the extension.")
-    load_file.add_argument("--args", dest="args", action=KeyValueArg, help="Key value arguments to pass to registered transformers.")
+    load_file.add_argument("--args", dest="args", default={}, nargs="*", action=KeyValueArg, help="Key value arguments to pass to registered transformers.")
 
     load_dir = op_parser.add_parser(
         "load",
@@ -129,9 +131,5 @@ def make_parser():
     load_dir.add_argument("dir", help="Path of the file to load from")
     load_dir.add_argument("pattern", help="Glob pattern used to decide which files to load. For example, '*.csv'")
 
-    load_dir.add_argument("--args", dest="args", action=KeyValueArg, help="Key value arguments to pass to registered transformers.")
-
+    load_dir.add_argument("--args", dest="args", default={}, nargs="*", action=KeyValueArg, help="Key value arguments to pass to registered transformers.")
     return parser
-if __name__== "__main__":
-    p = make_parser()
-    p.parse_args()
