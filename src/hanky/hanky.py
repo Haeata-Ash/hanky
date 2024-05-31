@@ -276,7 +276,8 @@ class Hanky:
             # print(f"######## {is_dupe}")
 
             # at least one other card has a matching index field
-            if len(self.col.find_cards(f"{idx_field}:{fields[idx_field]}")):
+            # encase field value in double quotes for multi word field values
+            if len(self.col.find_cards(f'{idx_field}:"{fields[idx_field]}"')):
                 return False
         self.col.add_note(new_card, deck_id)
 
