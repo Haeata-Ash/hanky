@@ -1,7 +1,7 @@
 import functools
 import hashlib
 from pathlib import Path
-from typing import Callable, Generator, Iterator, List, Union
+from typing import Any, Callable, Dict, Optional, List
 
 from anki.collection import Collection, SearchNode
 from tomllib import load as toml_load
@@ -11,15 +11,22 @@ from hanky.config import (
     ALLOW_DUPLICATES,
     ANKI_DB_PATH,
     DEFAULT_CONFIG,
+    DEFAULT_CONFIG_PATH,
     DO_SAFET_CHECK,
     Config,
 )
-from hanky.fs import DEFAULT_LOADERS, has_handle, read_file
+from hanky.fs import DEFAULT_LOADERS, has_handle, Loader
 from hanky.media import is_audio_ext, make_anki_sound_ref
 
 
 class ModelProcessor:
-    def __init__(self, model_name: str, func, expected_args, required_fields):
+    def __init__(
+        self,
+        model_name: str,
+        func: Callable,
+        expected_args: List[str],
+        required_fields: List[str],
+    ):
         self.f = func
         self.model = model_name
         self.expected_args = expected_args
@@ -54,21 +61,32 @@ class ModelProcessor:
 
 class Hanky:
     def __init__(self, **kwargs):
-        # set default config and then overwrite with config object provided via constructor
-        # ensures default keys are present
+        # set default config to ensure needed fields are present
         self.config: Config = Config(**DEFAULT_CONFIG)
+
+        # read in config from default location if it exists, overwriting default config
+        if DEFAULT_CONFIG_PATH.exists() and DEFAULT_CONFIG_PATH.is_file():
+            self.config.from_file(
+                DEFAULT_CONFIG_PATH,
+                toml_load,
+            )
+
+        # overwrite config with any runtime kwargs
         if kwargs:
             self.config.update(kwargs)
 
         self._col: Collection = None
 
-        self.processors = dict()
-        self.loaders = dict(DEFAULT_LOADERS)
+        self.processors: Dict[str, List[ModelProcessor]] = dict()
+        self.loaders: Dict[str, Loader] = dict()
+        for k,v in DEFAULT_LOADERS:
+            self.register_loader(k, v)
 
-    def run(self):
+    def run(self) -> None:
         parser = make_parser()
         args = parser.parse_args()
 
+        # read in configuration from user specified location, overwriting any existing config
         if args.config:
             self.config.from_file(args.config, toml_load)
 
@@ -85,12 +103,12 @@ class Hanky:
                 args.model,
                 args.dir,
                 args.pattern,
-                recursive=args.is_rec,
+                args.is_rec,
                 *(args.args) if args.args else {},
             )
 
     @property
-    def col(self):
+    def col(self) -> Collection:
         if not self._col:
             if not self.config[ANKI_DB_PATH]:
                 raise RuntimeError(
@@ -107,30 +125,31 @@ class Hanky:
             if self.config[DO_SAFET_CHECK]:
                 if has_handle(self.config[ANKI_DB_PATH]):
                     raise RuntimeError(
-                        """At least one other process is using the anki database. Ensure the Anki application is closed before using Hanky to avoid possible corruption."""
+                        """At least one other process is using the anki database. Ensure the Anki application is closed before using Hanky to avoid possible database corruption."""
                     )
 
-            self._col = Collection(db_path)
+            self._col = Collection(str(db_path))
         return self._col
 
     def add_card(
         self,
-        deck_name,
-        model_name,
-        filter_query: str = None,
+        deck_name: str,
+        model_name: str,
+        filter_query: Optional[str] = None,
         allow_duplicates=False,
         **fields,
     ) -> bool:
         model = self.col.models.by_name(model_name)
-        if not model:
+        if model is None:
             raise ValueError(
                 f"Model '{model_name}' does not exist in your anki collection. Ensure it has been added before using it with hanky."
             )
         deck_id = self.col.decks.id(deck_name, create=False)
-        if not deck_id:
-            ValueError(
+        if deck_id is None:
+            raise ValueError(
                 f"Deck '{deck_name}' does not exist in your anki collection. Ensure it has been created before using it with hanky."
             )
+        
         expected_fields = self.col.models.field_names(model)
         for k in expected_fields:
             if k not in fields:
@@ -146,7 +165,9 @@ class Hanky:
             if len(matches):
                 return False
 
-        allow_duplicates = allow_duplicates if allow_duplicates else self.config[ALLOW_DUPLICATES]
+        allow_duplicates = (
+            allow_duplicates if allow_duplicates else self.config[ALLOW_DUPLICATES]
+        )
 
         if not allow_duplicates:
             rets = [True]
@@ -170,13 +191,26 @@ class Hanky:
 
         return True
 
-    def add_deck(self, deck_name) -> bool:
+    def add_deck(self, deck_name: str) -> bool:
         self.col.decks.id(deck_name)
         return True
 
     def register_loader(
-        self, file_ext: str, loader: Callable[[str], Union[Iterator, Generator]]
-    ):
+        self, file_ext: str, loader: Loader, is_text=True, **loader_kwargs
+    ) -> None:
+        def loader_wrapper(fpath: str):
+            try:
+                with open(fpath, "r" if is_text else "rb") as f:
+                    for item in loader(f, **loader_kwargs):
+                        if not isinstance(item, dict):
+                            raise ValueError(
+                                f"Item returned by loader for file extension '{file_ext}' did not return a dictionary."
+                            )
+                        yield item
+            except FileNotFoundError as e:
+                print(f"File {fpath} could not be found.")
+                print("Exiting...")
+
         self.loaders[file_ext] = loader
 
     def register_card_processor(
@@ -185,7 +219,7 @@ class Hanky:
         handler: Callable[[dict], dict],
         expected_args: List[str] = [],
         expected_fields: List[str] = [],
-    ):
+    ) -> None:
         if model_name not in self.processors:
             self.processors[model_name] = []
         self.processors[model_name].append(
@@ -214,16 +248,14 @@ class Hanky:
         self,
         fpath: str,
         model_name: str,
-        deck_name: str = None,
-        loader=None,
-        parent_deck="",
+        deck_name: Optional[str] = None,
+        loader: Optional[Loader] = None,
         **model_args,
-    ):
-        print(f"Loading into deck {deck_name}")
-        fpath = Path(fpath).absolute()
+    ) -> bool:
+        path = Path(fpath).absolute()
 
         transformers = self.get_model_processors(model_name)
-        loader = loader if loader else self.get_loader(fpath.suffix)
+        loader = loader if loader else self.get_loader(path.suffix)
 
         model = self.col.models.by_name(model_name)
         if not model:
@@ -232,13 +264,13 @@ class Hanky:
             )
 
         # deck is the specified name or filename without extension
-        deck_name = deck_name if deck_name else fpath.stem
-
+        deck_name = deck_name if deck_name else path.stem
+        print(f"Loading into deck {deck_name}")
         self.add_deck(deck_name)
 
         count = 0
         total = 0
-        for item in read_file(fpath, loader):
+        for item in self.get_loader(path.suffix)(path.absolute()):
             card = dict(item)
             for t in transformers:
                 card = t(card, **model_args)
@@ -251,11 +283,12 @@ class Hanky:
             total += 1
             if ret:
                 count += 1
-        
+
         print(f"Added {count} out of {total} cards.")
+        return True
 
     def add_media(
-        self, data, anki_media_filename: str = None, file_ext: str = None
+        self, data: Any, anki_media_filename: Optional[str] = None, file_ext: Optional[str] = None
     ) -> str:
         ext = None
         if anki_media_filename:
@@ -292,7 +325,7 @@ class Hanky:
 
         return anki_ref
 
-    def add_media_file(self, local_path) -> str:
+    def add_media_file(self, local_path: str) -> str:
         anki_ref = self.col.media.escape_media_filenames(
             self.col.media.add_file(local_path)
         )
@@ -306,16 +339,14 @@ class Hanky:
         model: str,
         root_dir: str,
         glob_pattern: str,
-        recursive=False,
-        parent_deck: str = "",
-        loader=None,
+        recursive = False,
+        loader: Optional[Loader] = None,
         **model_args,
-    ):
-        parent_deck = ""
+    ) -> bool:
 
         root = Path(root_dir).expanduser()
 
-        root_deck = parent_deck if parent_deck else root.name
+        root_deck = root.name
 
         def _glob(root, pattern, recursive):
             if recursive:
@@ -343,9 +374,11 @@ class Hanky:
                 full_deck = "::".join(deck_list)
 
                 self.load_deck(
-                    abs_path,
+                    str(abs_path),
                     model,
                     deck_name=full_deck,
                     loader=loader,
                     **model_args,
                 )
+
+        return True

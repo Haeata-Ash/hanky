@@ -24,13 +24,8 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-# tos = [
-#   "boto3"
-# ]
-
-dev = [
-  "pytest",
-  "mypy"
+tos = [
+  "boto3"
 ]
 
 [project.urls]
@@ -55,3 +50,10 @@ exclude = [
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/hanky"]
+
+[tool.hatch.envs.dev]
+dependencies = [
+  "pytest",
+  "mypy",
+  "types-psutil"
+]
