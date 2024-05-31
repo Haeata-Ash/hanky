@@ -41,12 +41,26 @@ class Config(dict):
 
     def from_file(
         self,
-        file: Union[Path, str],
+        fpath: str,
         loader: Callable[[IO[Any]], dict],
-        text=False,
+        is_text=False,
         **kwargs,
     ) -> bool:
-        with open(file, "r" if text else "rb") as f:
+        """Load configuration data from a file
+        
+        Args:
+            fpath: path to a file
+            loader: function to use to read the file
+            is_text: if the file should be read as text or binary. True for text
+            **kwargs: key word arguments for the loader function
+        
+        Returns:
+            True on successfull
+        
+        Raises:
+            TypeError if the output of the loader function is not a dictionary.
+        """
+        with open(fpath, "r" if is_text else "rb") as f:
             cfg = loader(f, **kwargs)
             if not isinstance(cfg, dict):
                 raise TypeError(

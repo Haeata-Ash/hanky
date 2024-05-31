@@ -58,5 +58,6 @@ packages = ["src/hanky"]
 dependencies = [
   "pytest",
   "mypy",
-  "types-psutil"
+  "types-psutil",
+  "pre-commit"
 ]

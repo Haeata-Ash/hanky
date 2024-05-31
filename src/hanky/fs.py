@@ -8,6 +8,7 @@ import psutil
 Loader = Callable[[IO[Any]], Iterator[dict]]
 
 def has_handle(fpath: str) -> bool:
+    """Check if another process has a handle for a given file"""
     path: Path = Path(fpath).expanduser().absolute()
     for proc in psutil.process_iter():
         try:
