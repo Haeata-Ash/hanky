@@ -4,6 +4,8 @@ import boto3
 
 GERMAN = "Vicki"
 FRENCH = "Lea"
+
+
 def generate_neural_speech(
     utf_8_str: str,
     voice: str,
@@ -20,7 +22,7 @@ hanky = Hanky(anki_database="~/.local/share/Anki2/TestUser/collection.anki2")
 
 
 @hanky.card_processor(
-    "lang-vocab", expected_args=["lang"], expected_fields=["Front", "Back"]
+    "lang-vocab", expected_args=["lang"], card_fields=["Front", "Back"]
 )
 def lang_model(card: dict, lang):
     front_speech = None
@@ -33,7 +35,7 @@ def lang_model(card: dict, lang):
         back_speech = generate_neural_speech(card["Back"], GERMAN)
     else:
         raise Exception("Unkown language.")
-    
+
     front_speech_ref = hanky.add_media(front_speech, file_ext=".mp3")
     back_speech_ref = hanky.add_media(back_speech, file_ext=".mp3")
 
@@ -46,5 +48,5 @@ hanky.run()
 
 # Usage: python3 demo.py load-deck "lang-vocab" ~/french/bodies.csv --args lang=french
 
-# expects there to be a model created in anki named 'lang-vocab' 
+# expects there to be a model created in anki named 'lang-vocab'
 # with the following fields: Front, Back, front-speech, back-speech

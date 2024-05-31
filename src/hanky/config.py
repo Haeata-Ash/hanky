@@ -1,6 +1,7 @@
 import platform
 from pathlib import Path
-from typing import Callable, Union, IO, Any
+from typing import Callable, IO, Any
+
 
 def _get_default_anki_db_path() -> str:
     """Choose a default path for the anki sqlite collection database based on
@@ -25,14 +26,14 @@ ALLOW_DUPLICATES = "allow_duplicates"
 DEFAULT_CONFIG = {
     ANKI_DB_PATH: _get_default_anki_db_path(),
     DO_SAFET_CHECK: True,
-    ALLOW_DUPLICATES: False
+    ALLOW_DUPLICATES: False,
 }
 
 DEFAULT_CONFIG_PATH = Path("~/.config/hanky/hanky.toml").expanduser()
 
+
 class Config(dict):
     """Configuration object"""
-
 
     def __init__(self, **kwargs):
         self._config = None
@@ -47,16 +48,16 @@ class Config(dict):
         **kwargs,
     ) -> bool:
         """Load configuration data from a file
-        
+
         Args:
             fpath: path to a file
             loader: function to use to read the file
             is_text: if the file should be read as text or binary. True for text
             **kwargs: key word arguments for the loader function
-        
+
         Returns:
             True on successfull
-        
+
         Raises:
             TypeError if the output of the loader function is not a dictionary.
         """
@@ -69,6 +70,5 @@ class Config(dict):
 
             for k, v in cfg.items():
                 self[k] = v
-        
-        return True
 
+        return True

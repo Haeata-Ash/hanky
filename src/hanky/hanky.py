@@ -21,16 +21,17 @@ from hanky.media import is_audio_ext, make_anki_sound_ref
 
 class ModelProcessor:
     """The wrapper for user defined functions which process cards of a certain model.
-    
-    Wraps a python callable which takes a dictionary representing an anki card, 
-    the key word arguments the callable expects and the fields (keys) it 
+
+    Wraps a python callable which takes a dictionary representing an anki card,
+    the key word arguments the callable expects and the fields (keys) it
     assumes to be already present in the card.
-    
+
     Attributes:
         f: the user defined callable which processes each card
         model: The type of card (anki model) which the callable processes
         expected_args: Expected key word arguments of the callable
         card_fields: Anki fields expected to be already present in any cards processed"""
+
     def __init__(
         self,
         model_name: str,
@@ -46,7 +47,7 @@ class ModelProcessor:
             expected_args: Expected key word arguments of the callable
             card_fields: Anki fields expected to be already present in any cards processed
         """
-        
+
         self.f = func
         self.model = model_name
         self.expected_args = expected_args
@@ -54,20 +55,20 @@ class ModelProcessor:
 
         if not isinstance(self.expected_args, list):
             raise TypeError("'expected_args' must be a list of strings")
-        if not isinstance(self.required_fields, list):
+        if not isinstance(self.card_fields, list):
             raise TypeError("'required_fields' must be a list of strings")
 
     def __call__(self, card: dict, **kwargs) -> dict:
-        """Check expected fields are present in card and expected key word arguments 
+        """Check expected fields are present in card and expected key word arguments
         were provided, call the callable on the card and validate output is a dictionary.
-        
+
         Args:
             card: dictionary representing field, value pairs of an anki card
             **kwargs: key word arguments for the callable
-        
+
         Returns:
             card dictionary with possibly new fields added by user defined callable
-        
+
         """
         for k in self.card_fields:
             if k not in card:
@@ -93,8 +94,8 @@ class ModelProcessor:
 class Hanky:
     """Manages interactions with the anki collection and exposes a simplified interface for adding cards.
     Optionally runnable as a CLI application.
-    
-    Keeps track of 'card processor' functions/callables which enrich or 
+
+    Keeps track of 'card processor' functions/callables which enrich or
     transform their data before adding the card to the database.
 
     Keeps track of 'loader' functions which read possibly incomplete card data from files.
@@ -104,6 +105,7 @@ class Hanky:
         processors: dictionary of anki model names mapped to user defined callables
         loaders: dictionary of file extensions mapped to a function which reads card data
     """
+
     def __init__(self, **options):
         """Initializes a Hanky application object
 
@@ -140,7 +142,7 @@ class Hanky:
 
         args = parser.parse_args()
 
-        # read in configuration from user specified location, 
+        # read in configuration from user specified location,
         # overwriting any existing config
         if args.config:
             self.config.from_file(args.config, toml_load)
@@ -164,7 +166,7 @@ class Hanky:
 
     @property
     def col(self) -> Collection:
-        """Anki collection. Access will raise an error if another processes is 
+        """Anki collection. Access will raise an error if another processes is
         using the anki database"""
         if not self._col:
             if not self.config[ANKI_DB_PATH]:
@@ -205,7 +207,7 @@ class Hanky:
 
         Returns:
             A bool, true if the card was successfully added, false otherwise
-        
+
         Raises:
             ValueError: The deck or model don't exist
             KeyError: The card does not have the required fields for the model
@@ -282,11 +284,11 @@ class Hanky:
         """Register a function to use to load card data from files with a certain extension.
 
         Args:
-            file_ext: 
+            file_ext:
                 the file ext, including the dot, for example '.csv'
-            loader: the callable which takes an IO object and returns 
+            loader: the callable which takes an IO object and returns
                 dictionaries of card data
-            is_text: If the loader reads the file as text (rather than binary), 
+            is_text: If the loader reads the file as text (rather than binary),
                 true if it does
 
         Returns:
@@ -305,7 +307,7 @@ class Hanky:
                                 f"Item returned by loader for file extension '{file_ext}' did not return a dictionary."
                             )
                         yield item
-            except FileNotFoundError as e:
+            except FileNotFoundError:
                 print(f"File {fpath} could not be found.")
                 print("Exiting...")
 
@@ -320,9 +322,9 @@ class Hanky:
     ) -> None:
         """Adds a python callable to be called when adding a card of type model.
 
-        The callable will be called with the first argument being the card 
-        data (a dictionary mapping field names to values) BEFORE the card 
-        is added to the anki database. A registered function could be used 
+        The callable will be called with the first argument being the card
+        data (a dictionary mapping field names to values) BEFORE the card
+        is added to the anki database. A registered function could be used
         to alter existing card data (transform), add data (enrich) or anything else.
 
         If multiple callables are registered, they will be called in the same
@@ -332,7 +334,7 @@ class Hanky:
             model_name: the name of the card model
             processor: the callable to apply to the cards of the given model type
             expected_args: list of arguments expected by the callable
-            card_fields: list of fields expected to be present in the card 
+            card_fields: list of fields expected to be present in the card
                 when the callable is applied
 
         Returns:
@@ -349,8 +351,8 @@ class Hanky:
     ):
         """Decorator which automatically registers a card processor function
 
-        A card processor takes a card (dictionary of field, value pairs) and any 
-        defined arguments and then performs some action based on its fields or 
+        A card processor takes a card (dictionary of field, value pairs) and any
+        defined arguments and then performs some action based on its fields or
         values. For example it could be used to:
             - generate media, such as audio based on the field of a card
             - query an api for a translation, based on the field of a card
@@ -368,12 +370,13 @@ class Hanky:
             model_name: the name of the card model
             expected_args: list of named arguments expected by the card processor.
                 They will be passed in as key word arguments.
-            card_fields: list of fields expected to be present in the card 
+            card_fields: list of fields expected to be present in the card
                 when the card processor is called.
 
         Returns:
             Decorated card processor function
         """
+
         def decorator(func):
             self.register_card_processor(model, func, expected_args, card_fields)
             return func
@@ -403,7 +406,7 @@ class Hanky:
         Args:
             fpath: the path to the file
             model_name: The anki model/card type of the cards in the file
-            deck_name: Optionally the name of the deck. Defaults to the 
+            deck_name: Optionally the name of the deck. Defaults to the
                 filename without its extension.
             **model_args: arguments to provide to the card processor functions
 
@@ -457,14 +460,14 @@ class Hanky:
             media_fname: The filename including the extension. Defaults to a
                  sha256 hexdigest of the data.
             file_ext: The file extension to use which should match the data type,
-                for example, '.mp3'. Must be given if the media_fname is not 
+                for example, '.mp3'. Must be given if the media_fname is not
                 provided
 
         Returns:
             string which can be placed in an anki card to reference the media.
-            The string might be a uri, '[sound:my_audio.mp3]' for example in the 
+            The string might be a uri, '[sound:my_audio.mp3]' for example in the
             case of audio, or something else.
-        
+
         Raises:
             ValueError if media_fname and file_ext are both not provided
         """
@@ -511,12 +514,10 @@ class Hanky:
 
         Returns:
             string which can be placed in an anki card to reference the media.
-            The string might be a uri, '[sound:my_audio.mp3]' for example in the 
+            The string might be a uri, '[sound:my_audio.mp3]' for example in the
             case of audio, or something else.
         """
-        anki_ref = self.col.media.escape_media_filenames(
-            self.col.media.add_file(fpath)
-        )
+        anki_ref = self.col.media.escape_media_filenames(self.col.media.add_file(fpath))
         if is_audio_ext(anki_ref):
             anki_ref = make_anki_sound_ref(anki_ref)
 
@@ -532,7 +533,7 @@ class Hanky:
     ) -> bool:
         """Load cards from file(s) inside a directory.
 
-        The deck names are built from the relative paths of each file from the 
+        The deck names are built from the relative paths of each file from the
         root directory. So the following file system structure with root directory
         'french':
         french
@@ -541,7 +542,7 @@ class Hanky:
         ├── clothing.csv
         └── grammar
             └── passe_compose.csv
-        
+
         Results in the following decks:
         french
         french::animals
