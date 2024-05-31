@@ -1,5 +1,8 @@
 from hanky import Hanky
 
-if __name__ == "__main__":
+def main():
     hanky = Hanky()
     hanky.run()
+    
+if __name__ == "__main__":
+    main()

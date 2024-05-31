@@ -28,6 +28,9 @@ tos = [
   "boto3"
 ]
 
+[project.scripts]
+hanky = "hanky.__main__:main"
+
 [project.urls]
 Homepage = "https://github.com/Haeata-Ash/hanky"
 Issues = "https://github.com/Haeata-Ash/hanky/issues"

@@ -79,11 +79,13 @@ class Hanky:
 
         self.processors: Dict[str, List[ModelProcessor]] = dict()
         self.loaders: Dict[str, Loader] = dict()
-        for k,v in DEFAULT_LOADERS:
+        for k,v in DEFAULT_LOADERS.items():
             self.register_loader(k, v)
 
     def run(self) -> None:
-        parser = make_parser()
+        # check if we should show --args option
+        parser = make_parser(bool(self.processors))
+        
         args = parser.parse_args()
 
         # read in configuration from user specified location, overwriting any existing config

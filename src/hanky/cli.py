@@ -10,7 +10,7 @@ class KeyValueArg(argparse.Action):
             key, value = v.split("=")
             getattr(namespace, self.dest)[key] = value
 
-def make_parser():
+def make_parser(has_card_processors = False):
     parser = argparse.ArgumentParser(
         "hanky",
         description="Simple program to allow programatic management of anki cards",
@@ -28,7 +28,7 @@ def make_parser():
     )
     load_file = op_parser.add_parser(
         "load",
-        help="Load cards into an anki deck from a file"
+        help="Load card(s) into an anki deck from a file."
     )
     load_file.add_argument(
         "model",
@@ -38,11 +38,12 @@ def make_parser():
 
 
     load_file.add_argument("-d", "--deck", dest="deck", default=None, help="Name of the deck to load cards into. If not specified, defaults to the filename without the extension.")
-    load_file.add_argument("--args", dest="args", default={}, nargs="*", action=KeyValueArg, help="Key value arguments to pass to registered transformers.")
-
+    if has_card_processors:
+        load_file.add_argument("--args", dest="args", default={}, nargs="*", action=KeyValueArg, help="Key value arguments to pass to your card processor functions.")
+    
     load_dir = op_parser.add_parser(
         "load-dir",
-        help="Load cards into anki deck(s) from files in a directory, using the filenames as deck names."
+        help="Load card(s) into anki deck(s) from files in a directory, using the path to build deck names."
     )
     load_dir.add_argument("-r", "--recursive", dest="is_rec", action="store_true", default=False, help="If loading files from a directory, recursively load from files in sub directories as well.")
     load_dir.add_argument(
@@ -52,5 +53,6 @@ def make_parser():
     load_dir.add_argument("dir", help="Path of the file to load from")
     load_dir.add_argument("pattern", help="Glob pattern used to decide which files to load. For example, '*.csv'")
 
-    load_dir.add_argument("--args", dest="args", default={}, nargs="*", action=KeyValueArg, help="Key value arguments to pass to registered transformers.")
+    if has_card_processors:
+        load_dir.add_argument("--args", dest="args", default={}, nargs="*", action=KeyValueArg, help="Key value arguments to pass to your card processor functions.")
     return parser
