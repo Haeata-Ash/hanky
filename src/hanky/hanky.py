@@ -1,9 +1,8 @@
-import functools
 import hashlib
 from pathlib import Path
-from typing import Any, Callable, Dict, List, Optional
+from typing import Any, Callable, Dict, List, Optional, Iterator
 
-from anki.collection import Collection, SearchNode
+from anki.collection import Collection
 from tomllib import load as toml_load
 
 from hanky.cli import make_parser
@@ -129,7 +128,7 @@ class Hanky:
         self._col: Collection = None
 
         self.processors: Dict[str, List[ModelProcessor]] = dict()
-        self.loaders: Dict[str, Loader] = dict()
+        self.loaders: Dict[str, Callable[[str], Iterator[dict]]] = dict()
         for k, v in DEFAULT_LOADERS.items():
             self.register_loader(k, v)
 
@@ -147,12 +146,21 @@ class Hanky:
         if args.config:
             self.config.from_file(args.config, toml_load)
 
+        # model arguments we handle seperately
+        # since can't check if they are present in
+        # the namespace
+        model_args = {}
+        try:
+            model_args = args.args
+        except AttributeError:
+            pass
+
         if args.operation == "load":
             self.load_deck(
                 args.file,
                 args.model,
                 deck_name=args.deck,
-                **(args.args) if args.args else {},
+                **model_args,
             )
 
         elif args.operation == "load-dir":
@@ -161,7 +169,7 @@ class Hanky:
                 args.dir,
                 args.pattern,
                 args.is_rec,
-                *(args.args) if args.args else {},
+                **model_args,
             )
 
     @property
@@ -226,40 +234,50 @@ class Hanky:
         expected_fields = self.col.models.field_names(model)
         for k in expected_fields:
             if k not in fields:
-                raise KeyError(f"Expected field '{k}' is missing.")
+                raise KeyError(f"Expected field '{k}' is missing. {fields}")
 
         new_card = self.col.new_note(model)
 
         for k, v in fields.items():
-            new_card[k] = str(v)
-
-        # if filter_query:
-        #     matches = self.col.find_cards(filter_query)
-        #     if len(matches):
-        #         return False
+            new_card[k] = str(v).strip()
 
         allow_duplicates = (
             allow_duplicates if allow_duplicates else self.config[ALLOW_DUPLICATES]
         )
 
+        # check for duplicates based off of the sort field
         if not allow_duplicates:
-            rets = [True]
+            # rets = [True]
 
-            for field in fields:
-                if self.col.find_notes(
-                    self.col.build_search_string(
-                        new_card[field], SearchNode(field_name=field)
-                    )
-                ):
-                    rets.append(True)
-                else:
-                    rets.append(False)
+            # get the models sort index
+            sort_idx = self.col.models.sort_idx(model)
 
-            is_dupe = functools.reduce(lambda x, y: x and y, rets)
+            # models fields in the form
+            # {name: (order_idx, field object) for f in notetype["flds"]}
+            field_map = self.col.models.field_map(model)
 
-            if is_dupe:
+            # search fields for index field. Index field always 0
+            res = list(filter(lambda x: field_map[x][0] == sort_idx, field_map))
+
+            # should only ever be one matching field
+            assert len(res) == 1
+            idx_field = res[0]
+
+            # for field in fields:
+            #     notes = self.col.find_cards(f"{field}:{fields[field]}")
+            #     print(len(notes), f"{field}:{fields[field].strip()}")
+            #     if notes:
+            #         rets.append(True)
+            #     else:
+            #         rets.append(False)
+            # is_dupe = functools.reduce(lambda x, y: x and y, rets)
+            # if is_dupe:
+            #     return False
+            # print(f"######## {is_dupe}")
+
+            # at least one other card has a matching index field
+            if len(self.col.find_cards(f"{idx_field}:{fields[idx_field]}")):
                 return False
-
         self.col.add_note(new_card, deck_id)
 
         return True
@@ -298,7 +316,7 @@ class Hanky:
         # wraps the loader in a generator function
         # if the file is not found we handle and print to the user
         # validates that the loader returns dictionaries when iterated on
-        def loader_wrapper(fpath: str):
+        def loader_wrapper(fpath: str) -> Iterator[dict]:
             try:
                 with open(fpath, "r" if is_text else "rb") as f:
                     for item in loader(f, **loader_kwargs):
@@ -311,7 +329,7 @@ class Hanky:
                 print(f"File {fpath} could not be found.")
                 print("Exiting...")
 
-        self.loaders[file_ext] = loader
+        self.loaders[file_ext] = loader_wrapper
 
     def register_card_processor(
         self,
@@ -430,7 +448,7 @@ class Hanky:
 
         count = 0
         total = 0
-        for item in self.get_loader(path.suffix)(path.absolute()):
+        for item in self.get_loader(path.suffix)(str(path.absolute())):
             card = dict(item)
             for t in transformers:
                 card = t(card, **model_args)
