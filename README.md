@@ -70,7 +70,7 @@ Hanky can be used as both a command line application and a library.
 
 - If you just want to load flash cards from files, see the examples below
 
-Hanky can be used out of the box as a command line application. If running your own hanky script, omit the `-m` seen in the below examples and replace `hanky` with your python file.
+Hanky can be used out of the box as a command line application. If running your own hanky script, replace `hanky` with `python3 my_script.py`.
 
 **Overview**
 
@@ -93,7 +93,7 @@ options:
 
 Load a single deck using the 'basic' anki model/note type from a file
 
-`python3 -m hanky load "basic" ~/my-folder/countries.csv`
+`hanky load "basic" ~/my-folder/countries.csv`
 
 The following deck will be created:
 - `countries`
@@ -102,7 +102,7 @@ The following deck will be created:
 
 Load all csv files in a folder as decks of cards using the 'basic' anki model/note type. The relative path from the specified folder will be used as the deck name.
 
-`python3 -m hanky load-dir "basic" "~/french/" "*.csv"`
+`hanky load-dir "basic" "~/french/" "*.csv"`
 
 For example, given the following folder structure:
 ```
@@ -132,7 +132,7 @@ french
 
 Recursively load all csv files as decks of cards using the 'basic' anki model/note type. The relative path from the specified folder will be used as the deck name.
 
-`python3 -m hanky load-dir "basic" "~/french/" "*.csv" -r`
+`hanky load-dir "basic" "~/french/" "*.csv" -r`
 
 For example, given the following folder structure:
 ```
