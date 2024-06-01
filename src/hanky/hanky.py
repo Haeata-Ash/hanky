@@ -29,7 +29,8 @@ class ModelProcessor:
         f: the user defined callable which processes each card
         model: The type of card (anki model) which the callable processes
         expected_args: Expected key word arguments of the callable
-        card_fields: Anki fields expected to be already present in any cards processed"""
+        card_fields: Anki fields expected to be already present in any cards processed
+    """
 
     def __init__(
         self,
@@ -78,7 +79,7 @@ class ModelProcessor:
         for k in self.expected_args:
             if k not in kwargs:
                 raise KeyError(
-                    f"Processor for {self.model} expects key word argument '{k}'. Ensure it is passed in via the --model-args option"
+                    f"Processor for {self.model} expects key word argument '{k}'. Ensure it is passed in via the --args option"
                 )
 
         ret = self.f(card, **kwargs)
