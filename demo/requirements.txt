@@ -1,0 +1,4 @@
+hanky
+pandas
+openpyxl
+boto3
