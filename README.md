@@ -31,7 +31,6 @@ This application was inspired by [genanki](https://github.com/kerrickstaley/gena
     - [Default Configuration](#default-configuration)
 - [Usage](#usage)
     - [Command Line Usage](#command-line-application-usage)
-    - [Defining Your Own Hanky Script](#defining-your-own-hanky-script)
 
 
 ## Installation
@@ -80,44 +79,96 @@ The following decks will be created:
 
 ### Example Script
 
-Create your hanky script. For more details, see the [Hanky Script Walkthrough](#defining-your-own-hanky-script)
+Create your hanky script, to extend hanky's behaviour. This example adds
+a card processor which transforms cards of type 'Language Learning' by
+adding French speech audio.
 
 ```python
 from hanky import Hanky
 import boto3
+import pandas
+
+
+hanky = Hanky()
 
 def french_tts(text):
     """Generate french speech audio from text using aws polly"""
     client = boto3.client("polly")
     res = client.synthesize_speech(
-        Engine="neural", OutputFormat="mp3", Text=utf_8_str, VoiceId="Lea"
+        Engine="neural", OutputFormat="mp3", Text=text, VoiceId="Lea"
     )
 
     return res["AudioStream"].read()
 
-hanky = Hanky()
+# define our own excel card loader using the pandas library
+def excel_loader(f_obj: IO):
+    """Load cards fields and values from an excel file.
+
+    Args:
+        f_obj: file object to read from
+    Yields:
+        dictionary of fields mapped to there values.
+    """
+    df = pandas.read_excel(f_obj)
+    for _, row in df.iterrows():
+        yield row.to_dict()
+
+
+# register the loader against ".xlsx" extension
+hanky.register_loader(".xlsx", excel_loader, is_text=False)
+
+
 
 @hanky.card_processor(
-    "french-vocab-model", expected_args=[], card_fields=["native-lang", "target-lang"]
+    "Language Learning", expected_args=[], card_fields=["Front", "Back"]
 )
 def lang_model(card: dict):
-    """Add french speech to cards of type/model 'french-vocab-model'. We assume that 
-    the model/note type has already been created in anki with the following fields
-        - native-lang
-        - target-lang
-        - target-lang-speech
+    """Transform cards of type/model 'Language Learning' by adding French speech.
+    We assume that the note type has already been created in anki with the following fields.
+        - Front
+        - Back
+        - Speech
+
+    The card type,'Language Learning' has the known language on the Front, while
+    the unknown language translation and its pronounciation speech is on the back.
+
+    For example:
+
+    ++++++++++++++++++++++++
+    +                      +
+    +      {{Front}}       +
+    +                      +
+    ++++++++++++++++++++++++
+
+    ++++++++++++++++++++++++
+    +                      +
+    +      {{Back}}        +
+    +      {{Speech}}      +
+    ++++++++++++++++++++++++
+
+    See [Adding a Note Type](https://docs.ankiweb.net/editing.html?highlight=template#adding-a-note-type)
+    to learn how to add a new note type to Anki.
+
+    See [Card Templates](https://docs.ankiweb.net/templates/intro.html)
+    to learn how to template fields onto the Front or Back of a Card.
     """
 
-    # generate the speech 
-    speech = french_tts(card["target-lang"])
+    # generate the speech. Use dedicated speech text if it exists, otherwise
+    # just use the back text
+    if "Speech" in card:
+        speech = french_tts(card["Speech"])
+    else:
+        speech = french_tts(card["Back"])
 
     # add the mp3 data to anki
     speech_ref = hanky.add_media(speech, file_ext=".mp3")
 
-    # put the reference to that media inside a field in the lang-vocab model
-    # in this case there is a specific field, 'target-lang-speech'
-    card["target-lang-speech"] = speech_ref
+    # put the reference to that media inside a field in the'Language Learning' model
+    # in this case there is a specific field, 'Speech'
+    card["Speech"] = speech_ref
+
     return card
+
 
 hanky.run()
 ```
@@ -276,6 +327,3 @@ french
 └── grammar
     └── passe_compose
 ```
-
-### Defining Your Own Hanky Script
-

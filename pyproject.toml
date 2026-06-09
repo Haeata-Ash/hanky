@@ -61,3 +61,10 @@ dependencies = [
   "types-psutil",
   "pre-commit"
 ]
+
+[tool.hatch.envs.test]
+dependencies = [
+  "boto3",
+  "pytest",
+  "pytest-cov"
+]

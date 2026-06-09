@@ -299,7 +299,7 @@ class Hanky:
         return True
 
     def register_loader(
-        self, file_ext: str, loader: Loader, is_text=True, **loader_kwargs
+        self, file_ext: str, loader: Loader, is_text=True, **fopen_kwargs
     ) -> None:
         """Register a function to use to load card data from files with a certain extension.
 
@@ -310,6 +310,7 @@ class Hanky:
                 dictionaries of card data
             is_text: If the loader reads the file as text (rather than binary),
                 true if it does
+            fopen_kwargs: Any other keyword args to be passed to open() call
 
         Returns:
             None
@@ -320,8 +321,8 @@ class Hanky:
         # validates that the loader returns dictionaries when iterated on
         def loader_wrapper(fpath: str) -> Iterator[dict]:
             try:
-                with open(fpath, "r" if is_text else "rb") as f:
-                    for item in loader(f, **loader_kwargs):
+                with open(fpath, "r" if is_text else "rb", **fopen_kwargs) as f:
+                    for item in loader(f):
                         if not isinstance(item, dict):
                             raise ValueError(
                                 f"Item returned by loader for file extension '{file_ext}' did not return a dictionary."
