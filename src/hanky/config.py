@@ -16,7 +16,7 @@ def _get_default_anki_db_path() -> str:
     elif platform.system() == "Darwin":
         return "~/Library/Application Support/Anki2/User 1/collection.anki2"
     else:
-        return ""
+        raise ValueError("Only linux and MacOS systems are supported.")
 
 
 ANKI_DB_PATH = "anki_database"
