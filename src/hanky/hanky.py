@@ -282,19 +282,13 @@ class Hanky:
 
         return True
 
-    def add_deck(self, deck_name: str) -> bool:
-        """Adds a deck to anki
+    def add_deck(self, deck_name: str):
+        """Adds a deck to anki. If the deck already exists nothing will happen
 
         Args:
             deck_name: the full name of the deck to be added
-
-        Returns:
-            A bool, true if the deck was successfully added, false otherwise
         """
-        deck_id = self.col.decks.id(deck_name, create=False)
-        if deck_id is None:
-            return False
-        return True
+        self.col.decks.id(deck_name)
 
     def register_loader(
         self, file_ext: str, loader: Loader, is_text=True, **fopen_kwargs
