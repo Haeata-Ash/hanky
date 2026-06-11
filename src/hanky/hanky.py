@@ -11,7 +11,7 @@ from hanky.config import (
     ANKI_DB_PATH,
     DEFAULT_CONFIG,
     DEFAULT_CONFIG_PATH,
-    DO_SAFET_CHECK,
+    DO_SAFETY_CHECK,
     Config,
 )
 from hanky.fs import DEFAULT_LOADERS, Loader, has_handle
@@ -190,7 +190,7 @@ class Hanky:
                     f"'{db_path}' either does not exist or is not a file. Please check the provided path to the anki collection."
                 )
 
-            if self.config[DO_SAFET_CHECK]:
+            if self.config[DO_SAFETY_CHECK]:
                 if has_handle(self.config[ANKI_DB_PATH]):
                     raise RuntimeError(
                         """At least one other process is using the anki database. Ensure the Anki application is closed before using Hanky to avoid possible database corruption."""

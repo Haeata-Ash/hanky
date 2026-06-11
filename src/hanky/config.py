@@ -20,12 +20,12 @@ def _get_default_anki_db_path() -> str:
 
 
 ANKI_DB_PATH = "anki_database"
-DO_SAFET_CHECK = "database_safety_check"
+DO_SAFETY_CHECK = "database_safety_check"
 ALLOW_DUPLICATES = "allow_duplicates"
 
 DEFAULT_CONFIG = {
     ANKI_DB_PATH: _get_default_anki_db_path(),
-    DO_SAFET_CHECK: True,
+    DO_SAFETY_CHECK: True,
     ALLOW_DUPLICATES: False,
 }
 
