@@ -260,8 +260,6 @@ class Hanky:
             # search fields for index field. Index field always 0
             res = list(filter(lambda x: field_map[x][0] == sort_idx, field_map))
 
-            # should only ever be one matching field
-            assert len(res) == 1
             idx_field = res[0]
 
             # for field in fields:
