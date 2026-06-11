@@ -291,7 +291,7 @@ class Hanky:
         Returns:
             A bool, true if the deck was successfully added, false otherwise
         """
-        deck_id = self.col.decks.id(deck_name)
+        deck_id = self.col.decks.id(deck_name, create=False)
         if deck_id is None:
             return False
         return True
