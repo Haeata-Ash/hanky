@@ -17,6 +17,8 @@ from hanky.config import (
 from hanky.fs import DEFAULT_LOADERS, Loader, has_handle
 from hanky.media import is_audio_ext, make_anki_sound_ref
 
+from anki.notes import NoteFieldsCheckResult
+
 
 class ModelProcessor:
     """The wrapper for user defined functions which process cards of a certain model.
@@ -203,8 +205,6 @@ class Hanky:
         self,
         deck_name: str,
         model_name: str,
-        # filter_query: Optional[str] = None,
-        allow_duplicates=False,
         **fields,
     ) -> bool:
         """Adds a card of a given model type to a deck.
@@ -212,7 +212,6 @@ class Hanky:
         Args:
             deck_name: the full destination deck name as a seen in anki.
             model_name: the name of the flash card model as seen in anki.
-            allow_duplicates: Whether or not to add the card if a matching one already exists.
 
         Returns:
             A bool, true if the card was successfully added, false otherwise
@@ -242,42 +241,12 @@ class Hanky:
         for k, v in fields.items():
             new_card[k] = str(v).strip()
 
-        allow_duplicates = (
-            allow_duplicates if allow_duplicates else self.config[ALLOW_DUPLICATES]
-        )
-
-        # check for duplicates based off of the sort field
-        if not allow_duplicates:
-            # rets = [True]
-
-            # get the models sort index
-            sort_idx = self.col.models.sort_idx(model)
-
-            # models fields in the form
-            # {name: (order_idx, field object) for f in notetype["flds"]}
-            field_map = self.col.models.field_map(model)
-
-            # search fields for index field. Index field always 0
-            res = list(filter(lambda x: field_map[x][0] == sort_idx, field_map))
-
-            idx_field = res[0]
-
-            # for field in fields:
-            #     notes = self.col.find_cards(f"{field}:{fields[field]}")
-            #     print(len(notes), f"{field}:{fields[field].strip()}")
-            #     if notes:
-            #         rets.append(True)
-            #     else:
-            #         rets.append(False)
-            # is_dupe = functools.reduce(lambda x, y: x and y, rets)
-            # if is_dupe:
-            #     return False
-            # print(f"######## {is_dupe}")
-
-            # at least one other card has a matching index field
-            # encase field value in double quotes for multi word field values
-            if len(self.col.find_cards(f'{idx_field}:"{fields[idx_field]}"')):
+        # use anki builtin duplicate detection to check for duplicates
+        if not self.config[ALLOW_DUPLICATES]:
+            card_state = new_card.duplicate_or_empty()
+            if card_state == NoteFieldsCheckResult.DUPLICATE:
                 return False
+
         self.col.add_note(new_card, deck_id)
 
         return True
