@@ -62,7 +62,7 @@ dependencies = [
   "pre-commit"
 ]
 
-[tool.hatch.envs.test]
+[tool.hatch.envs.hatch-test]
 dependencies = [
   "boto3",
   "pytest",

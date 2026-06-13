@@ -3,17 +3,9 @@ from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional, Iterator
 
 from anki.collection import Collection
-from tomllib import load as toml_load
 
 from hanky.cli import make_parser
-from hanky.config import (
-    ALLOW_DUPLICATES,
-    ANKI_DB_PATH,
-    DEFAULT_CONFIG,
-    DEFAULT_CONFIG_PATH,
-    DO_SAFETY_CHECK,
-    Config,
-)
+from hanky.config import DEFAULT_CONFIG_PATH, Config
 from hanky.fs import DEFAULT_LOADERS, Loader, has_handle
 from hanky.media import is_audio_ext, make_anki_sound_ref
 
@@ -115,20 +107,21 @@ class Hanky:
             **options: key values to override/add to configuration data
         """
         # set default config to ensure needed fields are present
-        self.config: Config = Config(**DEFAULT_CONFIG)
+        self.config: Config = Config()
 
         # read in config from default location if it exists, overwriting default config
         if DEFAULT_CONFIG_PATH.exists() and DEFAULT_CONFIG_PATH.is_file():
-            self.config.from_file(
-                DEFAULT_CONFIG_PATH,
-                toml_load,
+            self.config.from_toml(
+                str(DEFAULT_CONFIG_PATH),
             )
 
         # overwrite config with any runtime kwargs
         if options:
-            self.config.update(options)
+            self.config = self.config.update(**options)
 
-        self._col: Collection = None
+        # TODO: figure out a way to narrow this type so we don't have to ignore
+        # It should never be none anyway after run is called
+        self._col: Collection = None  # type: ignore
 
         self.processors: Dict[str, List[ModelProcessor]] = dict()
         self.loaders: Dict[str, Callable[[str], Iterator[dict]]] = dict()
@@ -147,7 +140,7 @@ class Hanky:
         # read in configuration from user specified location,
         # overwriting any existing config
         if args.config:
-            self.config.from_file(args.config, toml_load)
+            self.config.from_toml(args.config)
 
         # model arguments we handle seperately
         # since can't check if they are present in
@@ -180,20 +173,15 @@ class Hanky:
         """Anki collection. Access will raise an error if another processes is
         using the anki database"""
         if not self._col:
-            if not self.config[ANKI_DB_PATH]:
-                raise RuntimeError(
-                    """Path to anki sqlite collection database was 
-                    not provided in config and no suitable default known."""
-                )
-            db_path = Path(self.config[ANKI_DB_PATH]).expanduser().absolute()
+            db_path = Path(self.config.ANKI_DB_PATH).expanduser().absolute()
 
             if not db_path.exists() or not db_path.is_file():
                 raise FileNotFoundError(
                     f"'{db_path}' either does not exist or is not a file. Please check the provided path to the anki collection."
                 )
 
-            if self.config[DO_SAFETY_CHECK]:
-                if has_handle(self.config[ANKI_DB_PATH]):
+            if self.config.DO_SAFETY_CHECK:
+                if has_handle(self.config.ANKI_DB_PATH):
                     raise RuntimeError(
                         """At least one other process is using the anki database. Ensure the Anki application is closed before using Hanky to avoid possible database corruption."""
                     )
@@ -242,7 +230,7 @@ class Hanky:
             new_card[k] = str(v).strip()
 
         # use anki builtin duplicate detection to check for duplicates
-        if not self.config[ALLOW_DUPLICATES]:
+        if not self.config.ALLOW_DUPLICATES:
             card_state = new_card.duplicate_or_empty()
             if card_state == NoteFieldsCheckResult.DUPLICATE:
                 return False

@@ -1,74 +1,69 @@
+from dataclasses import dataclass
+import dataclasses
 import platform
 from pathlib import Path
-from typing import Callable, IO, Any
+import tomllib
 
 
-def _get_default_anki_db_path() -> str:
+def _get_system():
+    return platform.system()
+
+
+def _get_default_anki_db_path(system: str) -> str:
     """Choose a default path for the anki sqlite collection database based on
     the OS.
 
+    Params:
+        system: The operating system as given by stdlib platform.system()
     Defaults:
         Linux: "~/.local/share/Anki2/User 1/collection.anki2"
+
         MacOS: "~/Library/Application Support/Anki2/User 1/collection.anki2"
     """
-    if platform.system() == "Linux":
+    if system == "Linux":
         return "~/.local/share/Anki2/User 1/collection.anki2"
-    elif platform.system() == "Darwin":
+    elif system == "Darwin":
         return "~/Library/Application Support/Anki2/User 1/collection.anki2"
     else:
-        raise ValueError("Only linux and MacOS systems are supported.")
+        raise ValueError(
+            """Only linux and MacOS systems have a default anki database/collection path. 
+            Please specify path to anki db."""
+        )
 
-
-ANKI_DB_PATH = "anki_database"
-DO_SAFETY_CHECK = "database_safety_check"
-ALLOW_DUPLICATES = "allow_duplicates"
-
-DEFAULT_CONFIG = {
-    ANKI_DB_PATH: _get_default_anki_db_path(),
-    DO_SAFETY_CHECK: True,
-    ALLOW_DUPLICATES: False,
-}
 
 DEFAULT_CONFIG_PATH = Path("~/.config/hanky/hanky.toml").expanduser()
 
 
-class Config(dict):
+@dataclass
+class Config:
     """Configuration object"""
 
-    def __init__(self, **kwargs):
-        self._config = None
+    ANKI_DB_PATH: str = ""
+    DO_SAFETY_CHECK: bool = True
+    ALLOW_DUPLICATES: bool = False
 
-        super().__init__(kwargs)
-
-    def from_file(
-        self,
+    @classmethod
+    def from_toml(
+        cls,
         fpath: str,
-        loader: Callable[[IO[Any]], dict],
-        is_text=False,
-        **kwargs,
-    ) -> bool:
+    ) -> "Config":
         """Load configuration data from a file
 
         Args:
             fpath: path to a file
-            loader: function to use to read the file
-            is_text: if the file should be read as text or binary. True for text
-            **kwargs: key word arguments for the loader function
 
         Returns:
-            True on successfull
-
-        Raises:
-            TypeError if the output of the loader function is not a dictionary.
+            Config object
         """
-        with open(fpath, "r" if is_text else "rb") as f:
-            cfg = loader(f, **kwargs)
-            if not isinstance(cfg, dict):
-                raise TypeError(
-                    f"Received type '{type(cfg)}' but expected '{type(dict)}' from loader function."
-                )
 
-            for k, v in cfg.items():
-                self[k] = v
+        with open(fpath, "rb") as f:
+            return Config(**tomllib.load(f))
 
-        return True
+    def update(self, **kwargs) -> "Config":
+        return dataclasses.replace(self, **kwargs)
+
+    def __post_init__(self):
+        if self.ANKI_DB_PATH == "":
+            print("here lolol")
+            print(_get_system())
+            self.ANKI_DB_PATH = _get_default_anki_db_path(_get_system())
