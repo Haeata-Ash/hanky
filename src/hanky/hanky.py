@@ -269,17 +269,13 @@ class Hanky:
         # if the file is not found we handle and print to the user
         # validates that the loader returns dictionaries when iterated on
         def loader_wrapper(fpath: str) -> Iterator[dict]:
-            try:
-                with open(fpath, "r" if is_text else "rb", **fopen_kwargs) as f:
-                    for item in loader(f):
-                        if not isinstance(item, dict):
-                            raise ValueError(
-                                f"Item returned by loader for file extension '{file_ext}' did not return a dictionary."
-                            )
-                        yield item
-            except FileNotFoundError:
-                print(f"File {fpath} could not be found.")
-                print("Exiting...")
+            with open(fpath, "r" if is_text else "rb", **fopen_kwargs) as f:
+                for item in loader(f):
+                    if not isinstance(item, dict):
+                        raise ValueError(
+                            f"Item returned by loader for file extension '{file_ext}' did not return a dictionary."
+                        )
+                    yield item
 
         self.loaders[file_ext] = loader_wrapper
 
