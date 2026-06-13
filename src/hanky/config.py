@@ -64,6 +64,4 @@ class Config:
 
     def __post_init__(self):
         if self.ANKI_DB_PATH == "":
-            print("here lolol")
-            print(_get_system())
             self.ANKI_DB_PATH = _get_default_anki_db_path(_get_system())
