@@ -366,7 +366,7 @@ class Hanky:
         model_name: str,
         deck_name: Optional[str] = None,
         **model_args,
-    ) -> bool:
+    ) -> int:
         """Load cards from a file into a deck.
 
         Args:
@@ -377,7 +377,7 @@ class Hanky:
             **model_args: arguments to provide to the card processor functions
 
         Returns:
-            bool, true if the operation was successful, false otherwise
+            int, the number of cards successfully loaded
         """
         path = Path(fpath).absolute()
 
@@ -411,7 +411,7 @@ class Hanky:
                 count += 1
 
         print(f"Added {count} out of {total} cards.")
-        return True
+        return count
 
     def add_media(
         self,
@@ -496,7 +496,7 @@ class Hanky:
         glob_pattern: str,
         recursive=False,
         **model_args,
-    ) -> bool:
+    ) -> int:
         """Load cards from file(s) inside a directory.
 
         The deck names are built from the relative paths of each file from the
@@ -525,7 +525,7 @@ class Hanky:
             **model_args: arguments to provide to the card processor functions
 
         Returns:
-            bool, true if the operation was successful, false otherwise
+            int, the number of cards successfully loaded
         """
         root = Path(root_dir).expanduser()
 
@@ -539,6 +539,7 @@ class Hanky:
                 for path in root.glob(pattern):
                     yield path
 
+        num_cards_loaded = 0
         for path in _glob(root, glob_pattern, recursive):
             if path.is_file():
                 path = path.relative_to(root)
@@ -556,11 +557,11 @@ class Hanky:
                 deck_list.append(path.stem)
                 full_deck = "::".join(deck_list)
 
-                self.load_deck(
+                num_cards_loaded += self.load_deck(
                     str(abs_path),
                     model,
                     deck_name=full_deck,
                     **model_args,
                 )
 
-        return True
+        return num_cards_loaded
