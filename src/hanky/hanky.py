@@ -1,88 +1,19 @@
 import hashlib
 from pathlib import Path
-from typing import Any, Callable, Dict, List, Optional, Iterator
+from typing import Any, Callable, Dict, List, Optional, Iterator, Sequence
 
 from anki.collection import Collection
 
+from hanky.ModelProcessor import ModelProcessor
 from hanky.cli import make_parser
-from hanky.config import DEFAULT_CONFIG_PATH, Config
+from hanky.config import Config
 from hanky.fs import DEFAULT_LOADERS, Loader, has_handle
 from hanky.media import is_audio_ext, make_anki_sound_ref
 
 from anki.notes import NoteFieldsCheckResult
 
 
-class ModelProcessor:
-    """The wrapper for user defined functions which process cards of a certain model.
-
-    Wraps a python callable which takes a dictionary representing an anki card,
-    the key word arguments the callable expects and the fields (keys) it
-    assumes to be already present in the card.
-
-    Attributes:
-        f: the user defined callable which processes each card
-        model: The type of card (anki model) which the callable processes
-        expected_args: Expected key word arguments of the callable
-        card_fields: Anki fields expected to be already present in any cards processed
-    """
-
-    def __init__(
-        self,
-        model_name: str,
-        func: Callable[[dict], dict],
-        expected_args: List[str],
-        card_fields: List[str],
-    ):
-        """Initializes a model processor
-
-        Args:
-            func: the user defined callable which processes each card
-            model_name: The name of the anki model whose cards the callable processes
-            expected_args: Expected key word arguments of the callable
-            card_fields: Anki fields expected to be already present in any cards processed
-        """
-
-        self.f = func
-        self.model = model_name
-        self.expected_args = expected_args
-        self.card_fields = card_fields
-
-        if not isinstance(self.expected_args, list):
-            raise TypeError("'expected_args' must be a list of strings")
-        if not isinstance(self.card_fields, list):
-            raise TypeError("'required_fields' must be a list of strings")
-
-    def __call__(self, card: dict, **kwargs) -> dict:
-        """Check expected fields are present in card and expected key word arguments
-        were provided, call the callable on the card and validate output is a dictionary.
-
-        Args:
-            card: dictionary representing field, value pairs of an anki card
-            **kwargs: key word arguments for the callable
-
-        Returns:
-            card dictionary with possibly new fields added by user defined callable
-
-        """
-        for k in self.card_fields:
-            if k not in card:
-                raise KeyError(
-                    f"Processor requires '{k}' to be present in card. \n {str(card)}"
-                )
-
-        for k in self.expected_args:
-            if k not in kwargs:
-                raise KeyError(
-                    f"Processor for {self.model} expects key word argument '{k}'. Ensure it is passed in via the --args option"
-                )
-
-        ret = self.f(card, **kwargs)
-        if not isinstance(ret, dict):
-            raise TypeError(
-                f"Processor function did not return a dictionary like object, returned type {type(ret)}"
-            )
-
-        return ret
+_DEFAULT_CONFIG_PATH = Path("~/.config/hanky/hanky.toml").expanduser()
 
 
 class Hanky:
@@ -108,12 +39,8 @@ class Hanky:
         """
         # set default config to ensure needed fields are present
         self.config: Config = Config()
-
-        # read in config from default location if it exists, overwriting default config
-        if DEFAULT_CONFIG_PATH.exists() and DEFAULT_CONFIG_PATH.is_file():
-            self.config.from_toml(
-                str(DEFAULT_CONFIG_PATH),
-            )
+        if _DEFAULT_CONFIG_PATH.exists and _DEFAULT_CONFIG_PATH.is_file():
+            self.config = self.config.from_toml(_DEFAULT_CONFIG_PATH.as_posix())
 
         # overwrite config with any runtime kwargs
         if options:
@@ -127,46 +54,6 @@ class Hanky:
         self.loaders: Dict[str, Callable[[str], Iterator[dict]]] = dict()
         for k, v in DEFAULT_LOADERS.items():
             self.register_loader(k, v)
-
-    def run(self) -> None:
-        """Run the Hanky object as a CLI application"""
-
-        # check if we should show --args option
-        # no need if there are no defined card processors
-        parser = make_parser(bool(self.processors))
-
-        args = parser.parse_args()
-
-        # read in configuration from user specified location,
-        # overwriting any existing config
-        if args.config:
-            self.config.from_toml(args.config)
-
-        # model arguments we handle seperately
-        # since can't check if they are present in
-        # the namespace
-        model_args = {}
-        try:
-            model_args = args.args
-        except AttributeError:
-            pass
-
-        if args.operation == "load":
-            self.load_deck(
-                args.file,
-                args.model,
-                deck_name=args.deck,
-                **model_args,
-            )
-
-        elif args.operation == "load-dir":
-            self.load_dir(
-                args.model,
-                args.dir,
-                args.pattern,
-                args.is_rec,
-                **model_args,
-            )
 
     @property
     def col(self) -> Collection:
@@ -391,7 +278,6 @@ class Hanky:
 
         # deck is the specified name or filename without extension
         deck_name = deck_name if deck_name else path.stem
-        print(f"Loading into deck {deck_name}")
         self.add_deck(deck_name)
 
         count = 0
@@ -410,7 +296,6 @@ class Hanky:
             if ret:
                 count += 1
 
-        print(f"Added {count} out of {total} cards.")
         return count
 
     def add_media(
@@ -565,3 +450,58 @@ class Hanky:
                 )
 
         return num_cards_loaded
+
+    def run(self) -> None:
+        """Run the Hanky object as a CLI application. Useful for people extending the
+        hanky app or making use of processors or loaders.
+        """
+        _run_app(self)
+
+
+def _run_app(app: Hanky, args: Optional[Sequence[str]] = None):
+    """Run a Hanky object as a CLI application"""
+
+    # check if we should show --args option
+    # no need if there are no defined card processors
+    parser = make_parser(bool(app.processors))
+
+    if args is None:
+        parsed_args = parser.parse_args()
+    else:
+        parsed_args = parser.parse_args(args)
+
+    # read in configuration from user specified location,
+    # overwriting any existing config
+    if parsed_args.config:
+        app.config = app.config.from_toml(parsed_args.config)
+
+    # model arguments we handle seperately
+    # since can't check if they are present in
+    # the namespace
+    model_args = {}
+    try:
+        model_args = parsed_args.args
+    except AttributeError:
+        pass
+
+    cards_added = 0
+    if parsed_args.operation == "load":
+        print(f"Loading into deck {parsed_args.deck} from file {parsed_args.file}")
+        cards_added = app.load_deck(
+            parsed_args.file,
+            parsed_args.model,
+            deck_name=parsed_args.deck,
+            **model_args,
+        )
+
+    elif parsed_args.operation == "load-dir":
+        print(f"Loading from dirrectory {parsed_args.dir}")
+        cards_added = app.load_dir(
+            parsed_args.model,
+            parsed_args.dir,
+            parsed_args.pattern,
+            parsed_args.is_rec,
+            **model_args,
+        )
+
+    print(f"Added {cards_added} cards.")

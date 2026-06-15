@@ -1,14 +1,3 @@
-"""Tests for the core :class:`hanky.hanky.Hanky` object.
-
-Safety: these tests must *never* touch a real anki collection.
-  * ``no_real_config`` (autouse) redirects the default config path to a file
-    that doesn't exist, so ``Hanky`` can never pick up the user's real config
-    (which points at their real collection).
-  * ``app`` builds a throwaway collection inside pytest's ``tmp_path``.
-
-Scope: simple positive/negative cases only. Edge cases come later.
-"""
-
 import pytest
 from anki.collection import Collection
 
@@ -22,7 +11,7 @@ def fake_default_config(tmp_path, monkeypatch):
     we don't want to use
     """
     monkeypatch.setattr(
-        hanky_module, "DEFAULT_CONFIG_PATH", tmp_path / "no_such_config.toml"
+        hanky_module, "_DEFAULT_CONFIG_PATH", tmp_path / "no_such_config.toml"
     )
 
 

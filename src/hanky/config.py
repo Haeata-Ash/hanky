@@ -1,7 +1,6 @@
 from dataclasses import dataclass
 import dataclasses
 import platform
-from pathlib import Path
 import tomllib
 
 
@@ -29,9 +28,6 @@ def _get_default_anki_db_path(system: str) -> str:
             """Only linux and MacOS systems have a default anki database/collection path. 
             Please specify path to anki db."""
         )
-
-
-DEFAULT_CONFIG_PATH = Path("~/.config/hanky/hanky.toml").expanduser()
 
 
 @dataclass
