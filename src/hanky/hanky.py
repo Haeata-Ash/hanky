@@ -13,7 +13,7 @@ from hanky.media import is_audio_ext, make_anki_sound_ref
 from anki.notes import NoteFieldsCheckResult
 
 
-_DEFAULT_CONFIG_PATH = Path("~/.config/hanky/hanky.toml").expanduser()
+_DEFAULT_CONFIG_PATH = Path("~/.config/hanky/hanky.toml").expanduser().as_posix()
 
 
 class Hanky:
@@ -31,7 +31,7 @@ class Hanky:
         loaders: dictionary of file extensions mapped to a function which reads card data
     """
 
-    def __init__(self, config_fname: Optional[str | Path] = None, **options):
+    def __init__(self, config_fname: Optional[str] = None, **options):
         """Initializes a Hanky application object
 
         Args:
@@ -40,11 +40,7 @@ class Hanky:
         # set default config to ensure needed fields are present
         self.config: Config = Config()
         config_fname = _DEFAULT_CONFIG_PATH if config_fname is None else config_fname
-        config_fname = (
-            config_fname if isinstance(config_fname, Path) else Path(config_fname)
-        )
-        if config_fname.is_file():
-            self.config = self.config.from_toml(config_fname.as_posix())
+        self.config = self.config.from_toml(config_fname)
 
         # overwrite config with any runtime kwargs
         if options:
