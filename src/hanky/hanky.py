@@ -39,6 +39,7 @@ class Hanky:
         """
         # set default config to ensure needed fields are present
         self.config: Config = Config()
+<<<<<<< HEAD
         config_fname = (
             _DEFAULT_CONFIG_PATH
             if config_fname is None and Path(_DEFAULT_CONFIG_PATH).is_file()
@@ -46,6 +47,10 @@ class Hanky:
         )
         if config_fname:
             self.config = self.config.from_toml(config_fname)
+=======
+        if _DEFAULT_CONFIG_PATH.exists and _DEFAULT_CONFIG_PATH.is_file():
+            self.config = self.config.from_toml(_DEFAULT_CONFIG_PATH.as_posix())
+>>>>>>> aba4684 (Seperated model processor code into its own module. Decoupled the user io from the Hanky instance. Simplified config logic)
 
         # overwrite config with any runtime kwargs
         if options:
