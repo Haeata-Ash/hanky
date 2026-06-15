@@ -39,8 +39,13 @@ class Hanky:
         """
         # set default config to ensure needed fields are present
         self.config: Config = Config()
-        config_fname = _DEFAULT_CONFIG_PATH if config_fname is None else config_fname
-        self.config = self.config.from_toml(config_fname)
+        config_fname = (
+            _DEFAULT_CONFIG_PATH
+            if config_fname is None and Path(_DEFAULT_CONFIG_PATH).is_file()
+            else config_fname
+        )
+        if config_fname:
+            self.config = self.config.from_toml(config_fname)
 
         # overwrite config with any runtime kwargs
         if options:
