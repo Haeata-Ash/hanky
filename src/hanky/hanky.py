@@ -31,7 +31,7 @@ class Hanky:
         loaders: dictionary of file extensions mapped to a function which reads card data
     """
 
-    def __init__(self, **options):
+    def __init__(self, config_fname: Optional[str | Path] = None, **options):
         """Initializes a Hanky application object
 
         Args:
@@ -39,8 +39,12 @@ class Hanky:
         """
         # set default config to ensure needed fields are present
         self.config: Config = Config()
-        if _DEFAULT_CONFIG_PATH.exists and _DEFAULT_CONFIG_PATH.is_file():
-            self.config = self.config.from_toml(_DEFAULT_CONFIG_PATH.as_posix())
+        config_fname = _DEFAULT_CONFIG_PATH if config_fname is None else config_fname
+        config_fname = (
+            config_fname if isinstance(config_fname, Path) else Path(config_fname)
+        )
+        if config_fname.is_file():
+            self.config = self.config.from_toml(config_fname.as_posix())
 
         # overwrite config with any runtime kwargs
         if options:

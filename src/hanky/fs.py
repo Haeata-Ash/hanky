@@ -1,7 +1,7 @@
 import csv
 import json
 from pathlib import Path
-from typing import Callable, IO, Any, Iterator
+from typing import Callable, IO, Any, Dict, Iterator
 import psutil
 
 
@@ -22,4 +22,4 @@ def has_handle(fpath: str) -> bool:
     return False
 
 
-DEFAULT_LOADERS = {".json": json.load, ".csv": csv.DictReader}
+DEFAULT_LOADERS: Dict[str, Loader] = {".json": json.load, ".csv": csv.DictReader}
