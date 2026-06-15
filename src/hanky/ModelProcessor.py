@@ -1,4 +1,6 @@
-from typing import Callable, List
+from typing import Callable, List, Dict, Tuple
+
+from hanky.media import CardMedia
 
 
 class ModelProcessor:
@@ -26,9 +28,9 @@ class ModelProcessor:
 
         Args:
             func: the user defined callable which processes each card
-            model_name: The name of the anki model whose car
+            model_name: The name of the anki model whose cards the callable processes
             expected_args: Expected key word arguments of the callable
-            card_fields: Anki fields expected to be already d
+            card_fields: Anki fields expected to be already present in any cards processed
         """
 
         self.f = func
@@ -41,30 +43,36 @@ class ModelProcessor:
         if not isinstance(self.card_fields, list):
             raise TypeError("'required_fields' must be a list of strings")
 
-    def __call__(self, card: dict, **kwargs) -> dict:
-        """Check expected fields are present in card and exp
+    def __call__(self, card: dict, **kwargs) -> Tuple[Dict, List[CardMedia]]:
+        """Check expected fields are present in card and expected key word arguments
         were provided, call the callable on the card and validate output is a dictionary.
 
         Args:
-            card: dictionary representing field, value pairs
+            card: dictionary representing field, value pairs of an anki card
             **kwargs: key word arguments for the callable
 
         Returns:
-            card dictionary with possibly new fields added b
+            card dictionary with possibly new fields added by user defined callable
 
         """
         for k in self.card_fields:
             if k not in card:
-                raise KeyError(f"Processor requires '{k}' to be present")
+                raise KeyError(
+                    f"Processor requires '{k}' to be present in card. \n {str(card)}"
+                )
 
         for k in self.expected_args:
             if k not in kwargs:
                 raise KeyError(
-                    f"Processor for {self.model} expects keyit is passed in via the --args option"
+                    f"Processor for {self.model} expects key word argument '{k}'. Ensure it is passed in via the --args option"
                 )
 
         ret = self.f(card, **kwargs)
-        if not isinstance(ret, dict):
-            raise TypeError(f"Processor function did not return a dictiope {type(ret)}")
-
+        if isinstance(ret, Dict):
+            return ret, []
+        elif len(ret) == 2:
+            # let the user return a non list from the
+            # card if they want to
+            if isinstance(ret[1], CardMedia):
+                ret[1] = [ret[1]]
         return ret

@@ -1,4 +1,3 @@
-import hashlib
 from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional, Iterator, Sequence
 
@@ -8,7 +7,7 @@ from hanky.ModelProcessor import ModelProcessor
 from hanky.cli import make_parser
 from hanky.config import Config
 from hanky.fs import DEFAULT_LOADERS, Loader, has_handle
-from hanky.media import is_audio_ext, make_anki_sound_ref
+from hanky.media import CardMedia
 
 from anki.notes import NoteFieldsCheckResult
 
@@ -39,7 +38,6 @@ class Hanky:
         """
         # set default config to ensure needed fields are present
         self.config: Config = Config()
-<<<<<<< HEAD
         config_fname = (
             _DEFAULT_CONFIG_PATH
             if config_fname is None and Path(_DEFAULT_CONFIG_PATH).is_file()
@@ -47,10 +45,6 @@ class Hanky:
         )
         if config_fname:
             self.config = self.config.from_toml(config_fname)
-=======
-        if _DEFAULT_CONFIG_PATH.exists and _DEFAULT_CONFIG_PATH.is_file():
-            self.config = self.config.from_toml(_DEFAULT_CONFIG_PATH.as_posix())
->>>>>>> aba4684 (Seperated model processor code into its own module. Decoupled the user io from the Hanky instance. Simplified config logic)
 
         # overwrite config with any runtime kwargs
         if options:
@@ -294,8 +288,16 @@ class Hanky:
         total = 0
         for item in self.get_loader(path.suffix)(str(path.absolute())):
             card = dict(item)
+            media: List[CardMedia] = []
             for t in transformers:
-                card = t(card, **model_args)
+                card, new_media = t(card, **model_args)
+                media += new_media
+
+            # TODO: we are leaving the media in the db even if the card isn't
+            # added
+            for m in media:
+                actual_fname = self.add_media(m.data, m.desired_name)
+                m.replace_temp_refs(actual_fname, card)
 
             ret = self.add_card(
                 deck_name,
@@ -311,48 +313,18 @@ class Hanky:
     def add_media(
         self,
         data: Any,
-        media_fname: Optional[str] = None,
-        file_ext: Optional[str] = None,
+        media_fname: str,
     ) -> str:
-        """Add binary data as an anki media file.
+        """Add binary data to the anki collection.
 
         Args:
             data: the binary media data
-            media_fname: The filename including the extension. Defaults to a
-                 sha256 hexdigest of the data.
-            file_ext: The file extension to use which should match the data type,
-                for example, '.mp3'. Must be given if the media_fname is not
-                provided
+            media_fname: The filename including the extension
 
         Returns:
-            string which can be placed in an anki card to reference the media.
-            The string might be a uri, '[sound:my_audio.mp3]' for example in the
-            case of audio, or something else.
-
-        Raises:
-            ValueError if media_fname and file_ext are both not provided
+            The media filename after adding it to anki collection
         """
-        ext = None
-        if media_fname:
-            path = Path(media_fname)
-            ext = path.suffix
-        elif file_ext:
-            ext = file_ext
-        else:
-            raise ValueError(
-                "If argument 'media_fname' is not provided then 'file_ext' must be present"
-            )
-
-        if isinstance(data, str):
-            data = data.encode()
-
         desired_name = media_fname
-
-        # no filename given, use hash of the data plus file_ext
-        if not desired_name:
-            m = hashlib.sha256()
-            m.update(data)
-            desired_name = m.hexdigest() + ext
 
         # write media to anki database
         actual_name = self.col.media.write_data(
@@ -360,29 +332,7 @@ class Hanky:
             data,
         )
 
-        anki_ref = self.col.media.escape_media_filenames(actual_name)
-
-        if is_audio_ext(actual_name):
-            anki_ref = make_anki_sound_ref(anki_ref)
-
-        return anki_ref
-
-    def add_media_file(self, fpath: str) -> str:
-        """Add a file to anki media.
-
-        Args:
-            fpath: path to the file being added
-
-        Returns:
-            string which can be placed in an anki card to reference the media.
-            The string might be a uri, '[sound:my_audio.mp3]' for example in the
-            case of audio, or something else.
-        """
-        anki_ref = self.col.media.escape_media_filenames(self.col.media.add_file(fpath))
-        if is_audio_ext(anki_ref):
-            anki_ref = make_anki_sound_ref(anki_ref)
-
-        return anki_ref
+        return actual_name
 
     def load_dir(
         self,
