@@ -21,9 +21,6 @@ def test_update_changes_only_given_fields():
     assert updated.ALLOW_DUPLICATES is False
 
 
-# ---------------------------------------------------------------------------
-# Config.from_toml — reading config from files
-# ---------------------------------------------------------------------------
 def test_from_toml_reads_all_fields(tmp_path):
     toml = tmp_path / "hanky.toml"
     toml.write_text(

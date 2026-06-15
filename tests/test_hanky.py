@@ -1,32 +1,5 @@
 import pytest
-from anki.collection import Collection
-
-import hanky.hanky as hanky_module
 from hanky.hanky import Hanky
-
-
-@pytest.fixture(autouse=True)
-def fake_default_config(tmp_path, monkeypatch):
-    """Useful if testing on a system with default config file which
-    we don't want to use
-    """
-    monkeypatch.setattr(
-        hanky_module, "_DEFAULT_CONFIG_PATH", tmp_path / "no_such_config.toml"
-    )
-
-
-@pytest.fixture
-def app(tmp_path):
-    """A Hanky app backed by a fresh, empty, temporary anki collection."""
-    db_path = tmp_path / "collection.anki2"
-    # close new collection so Hanky can open it itself through the `col` property.
-    Collection(str(db_path)).close()
-
-    app = Hanky(ANKI_DB_PATH=str(db_path), DO_SAFETY_CHECK=False)
-    yield app
-
-    if app._col:
-        app.col.close()
 
 
 def test_add_deck_creates_deck(app):
@@ -88,3 +61,27 @@ def test_col_raises_when_db_path_missing(tmp_path):
 
     with pytest.raises(FileNotFoundError):
         _ = app.col
+
+
+def test_custom_config_path_is_loaded(tmp_path):
+    cfg = tmp_path / "custom.toml"
+    cfg.write_text("ALLOW_DUPLICATES = true\nDO_SAFETY_CHECK = false\n")
+
+    app = Hanky(config_fname=cfg)
+
+    assert app.config.ALLOW_DUPLICATES is True
+    assert app.config.DO_SAFETY_CHECK is False
+
+
+def test_runtime_options_override_config_file(tmp_path):
+    cfg = tmp_path / "custom.toml"
+    cfg.write_text("ALLOW_DUPLICATES = true\n")
+
+    app = Hanky(config_fname=str(cfg), ALLOW_DUPLICATES=False)
+
+    assert app.config.ALLOW_DUPLICATES is False
+
+
+def test_explicit_missing_config_path_raises(tmp_path):
+    with pytest.raises(FileNotFoundError):
+        Hanky(config_fname=tmp_path / "does_not_exist.toml")
