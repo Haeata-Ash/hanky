@@ -1,4 +1,4 @@
-from typing import Callable, List, Dict, Tuple
+from typing import Callable, List, Dict, Tuple, Union
 
 from hanky.media import CardMedia
 
@@ -20,7 +20,7 @@ class ModelProcessor:
     def __init__(
         self,
         model_name: str,
-        func: Callable[[dict], dict],
+        func: Callable[[dict], Union[dict, Tuple[dict, List[CardMedia]]]],
         expected_args: List[str],
         card_fields: List[str],
     ):
@@ -70,9 +70,5 @@ class ModelProcessor:
         ret = self.f(card, **kwargs)
         if isinstance(ret, Dict):
             return ret, []
-        elif len(ret) == 2:
-            # let the user return a non list from the
-            # card if they want to
-            if isinstance(ret[1], CardMedia):
-                ret[1] = [ret[1]]
+
         return ret
