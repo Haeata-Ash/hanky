@@ -6,18 +6,6 @@ from hanky.media import CardMedia
 from hanky.ModelProcessor import ModelProcessor
 
 
-# ===========================================================================
-# CardMedia
-# ===========================================================================
-#
-# A CardMedia is created during the card pipeline. It must:
-#   1. expose a `media_ref` that the user drops into a card field,
-#   2. remember a unique placeholder so that once the real file is written to
-#      anki, `replace_temp_refs` can swap the placeholder for the real name,
-#   3. derive a stable, content-addressed `desired_name` for de-duplication.
-# ===========================================================================
-
-
 def test_desired_name_is_sha256_of_data_plus_ext():
     data = b"some-audio-bytes"
     media = CardMedia(data, ".mp3")
@@ -82,16 +70,6 @@ def test_replace_temp_refs_leaves_unrelated_fields_untouched():
     media.replace_temp_refs("real_name.mp3", card)
 
     assert card["Front"] == "bonjour"
-
-
-# ===========================================================================
-# ModelProcessor
-# ===========================================================================
-#
-# A processor wraps a user callable. It must normalise the return value into a
-# (card, list_of_media) tuple regardless of whether the user returned just a
-# card, a (card, single_media) pair, or a (card, [media, ...]) pair.
-# ===========================================================================
 
 
 def test_dict_return_yields_empty_media_list():
