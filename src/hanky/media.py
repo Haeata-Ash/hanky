@@ -11,7 +11,7 @@ class CardMedia:
     will be replaced with the real one when it is added to the database.
     """
 
-    def __init__(self, data, ext: str) -> None:
+    def __init__(self, data: bytes, ext: str) -> None:
         self.data = data
         self._ext = ext
         self._ref = None
@@ -47,7 +47,7 @@ class CardMedia:
         return False
 
     def _make_anki_sound_ref(self) -> str:
-        return f"[sound:{self._ext}]"
+        return f"[sound:{self._temp_ref_uuid}]"
 
     def _make_desired_media_name(self):
         m = hashlib.sha256()
