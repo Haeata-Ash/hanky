@@ -1,6 +1,12 @@
-from typing import Callable, List, Dict, Tuple, Union
+from typing import Any, Callable, List, Dict, Tuple, Union
 
 from hanky.media import CardMedia
+
+
+# TODO: Not sure these are actually helpful
+SimpleProcessor = Callable[[Dict[str, Any]], Dict[str, str]]
+SimpleMediaProcessor = Callable[[Dict[str, Any]], Tuple[Dict[str, str], CardMedia]]
+ManyMediaProcessor = Callable[[Dict[str, Any]], Tuple[Dict[str, str], List[CardMedia]]]
 
 
 class ModelProcessor:
@@ -20,7 +26,7 @@ class ModelProcessor:
     def __init__(
         self,
         model_name: str,
-        func: Callable[[dict], Union[dict, Tuple[dict, List[CardMedia]]]],
+        func: Union[SimpleProcessor, SimpleMediaProcessor, ManyMediaProcessor],
         expected_args: List[str],
         card_fields: List[str],
     ):
@@ -43,7 +49,7 @@ class ModelProcessor:
         if not isinstance(self.card_fields, list):
             raise TypeError("'required_fields' must be a list of strings")
 
-    def __call__(self, card: dict, **kwargs) -> Tuple[Dict, List[CardMedia]]:
+    def __call__(self, card: dict, **kwargs) -> Tuple[Dict[str, str], List[CardMedia]]:
         """Check expected fields are present in card and expected key word arguments
         were provided, call the callable on the card and validate output is a dictionary.
 
@@ -67,8 +73,18 @@ class ModelProcessor:
                     f"Processor for {self.model} expects key word argument '{k}'. Ensure it is passed in via the --args option"
                 )
 
-        ret = self.f(card, **kwargs)
-        if isinstance(ret, Dict):
+        ret = self.f(card, **{k: kwargs[k] for k in self.expected_args})
+        # allow a processor to just return a card
+        if isinstance(ret, dict):
             return ret, []
+        # allow a processor to return a card and a single card media instance
+        elif isinstance(ret, tuple) and isinstance(ret[1], CardMedia):
+            return ret[0], [ret[1]]
+        elif isinstance(ret, tuple) and isinstance(ret[1], list):
+            return ret[0], ret[1]
 
-        return ret
+        # check successfully normalised to card and list of media
+        if not isinstance(ret[0], dict) or not isinstance(ret[1], list):
+            raise ValueError(
+                "Could not normalise processor return value to required return type"
+            )
