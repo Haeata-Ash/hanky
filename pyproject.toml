@@ -7,7 +7,7 @@ name = "hanky"
 authors = [{ name = "HBA", email = "hanky-pypi.8ebs0@simplelogin.com" }]
 description = "Simple library and command line tool for loading flash cards into anki."
 readme = "README.md"
-requires-python = ">=3.8"
+requires-python = ">=3.11"
 classifiers = [
     "Programming Language :: Python :: 3",
     "License :: OSI Approved :: MIT License",
@@ -68,3 +68,6 @@ dependencies = [
   "pytest",
   "pytest-cov"
 ]
+
+[[tool.hatch.envs.hatch-test.matrix]]
+python = ["3.12", "3.11"]
