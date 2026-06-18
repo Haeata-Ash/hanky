@@ -58,9 +58,15 @@ packages = ["src/hanky"]
 dependencies = [
   "pytest",
   "mypy",
+  "ruff",
   "types-psutil",
   "pre-commit"
 ]
+
+[tool.hatch.envs.dev.scripts]
+lint = "ruff check {args:.}"
+format-check = "ruff format --check {args:.}"
+typecheck = "mypy {args:src/hanky}"
 
 [tool.hatch.envs.hatch-test]
 dependencies = [
