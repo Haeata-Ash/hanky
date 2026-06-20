@@ -10,7 +10,7 @@ from hanky.fs import DEFAULT_LOADERS, Loader, has_handle
 from hanky.media import CardMedia
 
 from anki.notes import NoteFieldsCheckResult
-
+from aqt.profiles import ProfileManager
 
 _DEFAULT_CONFIG_PATH = Path("~/.config/hanky/hanky.toml").expanduser().as_posix()
 
@@ -53,6 +53,8 @@ class Hanky:
         # TODO: figure out a way to narrow this type so we don't have to ignore
         # It should never be none anyway after run is called
         self._col: Collection = None  # type: ignore
+
+        self._pm = ProfileManager(ProfileManager.get_created_base_folder(None))
 
         self.processors: Dict[str, List[ModelProcessor]] = dict()
         self.loaders: Dict[str, Callable[[str], Iterator[dict]]] = dict()
