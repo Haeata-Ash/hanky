@@ -31,6 +31,8 @@ This application was inspired by [genanki](https://github.com/kerrickstaley/gena
     - [Default Configuration](#default-configuration)
 - [Usage](#usage)
     - [Command Line Usage](#command-line-application-usage)
+- [Development](#development)
+- [Publishing](#publishing)
 
 
 ## Installation
@@ -327,3 +329,50 @@ french
 └── grammar
     └── passe_compose
 ```
+
+## Development
+
+This project uses [uv](https://docs.astral.sh/uv/). 
+
+To Install dependencies (note this does not install the option tos dependecies):
+
+```
+uv sync
+```
+
+Run tests:
+
+```
+uv run pytest
+```
+
+Note tests run against Python 3.11, 3.12 and 3.13 in CI. 
+
+
+Linting, formatting and type checking.
+
+```
+uv run ruff format .         # format
+uv run ruff check .          # lint
+uv run mypy src/hanky        # type check
+```
+
+## Publishing If You Are Me
+
+1. Bump `__version__` in `src/hanky/__about__.py`.
+2. Build the distributions:
+
+   ```
+   rm -rf dist && uv build
+   ```
+
+3. Publish, PyPI API token needs to be in the environment `UV_PUBLISH_TOKEN`:
+
+   ```
+   uv publish
+   ```
+
+4. Sanity check
+    ```
+    uv run --with hanky --refresh-package hanky --no-project -- python -c "import hanky"
+    ```
