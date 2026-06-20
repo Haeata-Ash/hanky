@@ -10,7 +10,6 @@ from hanky.fs import DEFAULT_LOADERS, Loader, has_handle
 from hanky.media import CardMedia
 
 from anki.notes import NoteFieldsCheckResult
-from aqt.profiles import ProfileManager
 
 _DEFAULT_CONFIG_PATH = Path("~/.config/hanky/hanky.toml").expanduser().as_posix()
 
@@ -54,8 +53,6 @@ class Hanky:
         # It should never be none anyway after run is called
         self._col: Collection = None  # type: ignore
 
-        self._pm = ProfileManager(ProfileManager.get_created_base_folder(None))
-
         self.processors: Dict[str, List[ModelProcessor]] = dict()
         self.loaders: Dict[str, Callable[[str], Iterator[dict]]] = dict()
         for k, v in DEFAULT_LOADERS.items():
@@ -80,7 +77,20 @@ class Hanky:
                     )
 
             self._col = Collection(str(db_path))
+            self.backup_collection(self.config.BACKUP_FOLDER)
+
         return self._col
+
+    def backup_collection(self, backup_folder: str):
+        """Backups the anki collection to the configured backup"""
+        folder_path = Path(backup_folder)
+        folder_path.mkdir(parents=True, exist_ok=True)
+        if not self._col.create_backup(
+            backup_folder=backup_folder,
+            force=True,
+            wait_for_completion=True,
+        ):
+            raise RuntimeError("Unable to create backup of anki collection.")
 
     def add_card(
         self,
