@@ -78,3 +78,9 @@ def test_explicit_flags_override_defaults():
 def test_default_db_path_unsupported_platform_raises():
     with pytest.raises(ValueError):
         _get_default_anki_db_path("Windows")
+
+
+def test_explicit_backup_folder_overrides_default():
+    cfg = Config(BACKUP_FOLDER="/custom/backups")
+
+    assert cfg.BACKUP_FOLDER == "/custom/backups"
