@@ -19,43 +19,47 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
         with:
-          python-version: "3.12"
-          cache: pip
-      - name: Install hatch
-        run: pipx install hatch
+          enable-cache: true
+      - name: Install dependencies
+        run: uv sync --python 3.12
       - name: ruff check
-        run: hatch run dev:lint
+        run: uv run ruff check .
       - name: ruff format --check
-        run: hatch run dev:format-check
+        run: uv run ruff format --check .
 
   typecheck:
     name: Type check (mypy)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
         with:
-          python-version: "3.12"
-          cache: pip
-      - name: Install hatch
-        run: pipx install hatch
+          enable-cache: true
+      - name: Install dependencies
+        run: uv sync --python 3.12
       - name: mypy
-        run: hatch run dev:typecheck
+        run: uv run mypy src/hanky
 
   test:
-    name: Test (hatch matrix)
+    name: Test (Python ${{ matrix.python-version }})
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.11", "3.12", "3.13"]
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
         with:
-          python-version: |
-            3.11
-            3.12
-          cache: pip
-      - name: Install hatch
-        run: pipx install hatch
-      - name: Run tests on all Python versions
-        run: hatch test --all
+          enable-cache: true
+      - name: Install dependencies
+        # --extra tos pulls boto3 so the TOS-dependent tests run, matching
+        # the old hatch-test environment.
+        run: uv sync --python ${{ matrix.python-version }} --extra tos
+      - name: Run tests
+        run: uv run --python ${{ matrix.python-version }} pytest

@@ -35,7 +35,22 @@ hanky = "hanky.__main__:main"
 Homepage = "https://github.com/Haeata-Ash/hanky"
 Issues = "https://github.com/Haeata-Ash/hanky/issues"
 
-[tool]
+# Development dependencies, managed by uv (PEP 735 dependency groups).
+# Installed by default with `uv sync`.
+[dependency-groups]
+dev = [
+  "pytest",
+  "pytest-cov",
+  "mypy",
+  "ruff",
+  "types-psutil",
+  "pre-commit",
+]
+
+# --- Build backend (hatchling) -------------------------------------------
+# uv drives the project/dev workflow, but hatchling stays as the PEP 517
+# build backend because it supplies the dynamic version read from
+# src/hanky/__about__.py. uv calls this backend for `uv build`/`uv publish`.
 
 [tool.hatch.version]
 path = "src/hanky/__about__.py"
@@ -47,33 +62,9 @@ exclude = [
   "/tests",
   "/.venv",
   "/.mypy_cache",
-  "/demo.py",
+  "/demo",
   "/.*"
 ]
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/hanky"]
-
-[tool.hatch.envs.dev]
-dependencies = [
-  "pytest",
-  "mypy",
-  "ruff",
-  "types-psutil",
-  "pre-commit"
-]
-
-[tool.hatch.envs.dev.scripts]
-lint = "ruff check {args:.}"
-format-check = "ruff format --check {args:.}"
-typecheck = "mypy {args:src/hanky}"
-
-[tool.hatch.envs.hatch-test]
-dependencies = [
-  "boto3",
-  "pytest",
-  "pytest-cov"
-]
-
-[[tool.hatch.envs.hatch-test.matrix]]
-python = ["3.12", "3.11"]
