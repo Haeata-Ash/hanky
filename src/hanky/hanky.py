@@ -11,7 +11,6 @@ from hanky.media import CardMedia
 
 from anki.notes import NoteFieldsCheckResult
 
-
 _DEFAULT_CONFIG_PATH = Path("~/.config/hanky/hanky.toml").expanduser().as_posix()
 
 
@@ -78,7 +77,20 @@ class Hanky:
                     )
 
             self._col = Collection(str(db_path))
+            self.backup_collection(self.config.BACKUP_FOLDER)
+
         return self._col
+
+    def backup_collection(self, backup_folder: str):
+        """Backups the anki collection to the configured backup"""
+        folder_path = Path(backup_folder)
+        folder_path.mkdir(parents=True, exist_ok=True)
+        if not self._col.create_backup(
+            backup_folder=backup_folder,
+            force=True,
+            wait_for_completion=True,
+        ):
+            raise RuntimeError("Unable to create backup of anki collection.")
 
     def add_card(
         self,

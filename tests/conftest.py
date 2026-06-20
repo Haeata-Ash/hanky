@@ -2,6 +2,7 @@ import pytest
 from anki.collection import Collection
 from hanky.hanky import Hanky
 import hanky.hanky as hanky_module
+import hanky.config as config_module
 
 
 @pytest.fixture(autouse=True)
@@ -15,13 +16,25 @@ def fake_default_config(tmp_path, monkeypatch):
 
 
 @pytest.fixture(autouse=True)
-def app(tmp_path, fake_default_config):
-    """A Hanky app backed by a fresh, empty, temporary anki collection."""
+def fake_default_backup_folder(tmp_path, monkeypatch):
+    monkeypatch.setattr(
+        config_module,
+        "_get_default_backup_folder",
+        lambda: str(tmp_path / "default_backups"),
+    )
+
+
+@pytest.fixture(autouse=True)
+def app(tmp_path, fake_default_config, fake_default_backup_folder):
     db_path = tmp_path / "collection.anki2"
     # close new collection so Hanky can open it itself through the `col` property.
     Collection(str(db_path)).close()
 
-    app = Hanky(ANKI_DB_PATH=str(db_path), DO_SAFETY_CHECK=False)
+    app = Hanky(
+        ANKI_DB_PATH=str(db_path),
+        DO_SAFETY_CHECK=False,
+        BACKUP_FOLDER=str(tmp_path / "backups"),
+    )
     yield app
 
     if app._col:

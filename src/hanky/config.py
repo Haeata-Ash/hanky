@@ -1,5 +1,6 @@
 from dataclasses import dataclass
 import dataclasses
+from pathlib import Path
 import platform
 import tomllib
 
@@ -30,6 +31,10 @@ def _get_default_anki_db_path(system: str) -> str:
         )
 
 
+def _get_default_backup_folder():
+    return Path("~/.local/share/hanky/backups").expanduser().as_posix()
+
+
 @dataclass
 class Config:
     """Configuration object"""
@@ -37,6 +42,7 @@ class Config:
     ANKI_DB_PATH: str = ""
     DO_SAFETY_CHECK: bool = True
     ALLOW_DUPLICATES: bool = False
+    BACKUP_FOLDER: str = ""
 
     @classmethod
     def from_toml(
@@ -61,3 +67,5 @@ class Config:
     def __post_init__(self):
         if self.ANKI_DB_PATH == "":
             self.ANKI_DB_PATH = _get_default_anki_db_path(_get_system())
+        if self.BACKUP_FOLDER == "":
+            self.BACKUP_FOLDER = _get_default_backup_folder()

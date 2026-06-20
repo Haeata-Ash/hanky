@@ -20,7 +20,7 @@ dynamic = ["version"]
 
 dependencies = [
   "anki",
-  "psutil"
+  "psutil",
 ]
 
 [project.optional-dependencies]
