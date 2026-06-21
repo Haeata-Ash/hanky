@@ -6,7 +6,7 @@ class KeyValueArg(argparse.Action):
         setattr(namespace, self.dest, dict())
 
         for v in values:
-            key, value = v.split("=")
+            key, value = v.split("=", 1)
             getattr(namespace, self.dest)[key] = value
 
 
