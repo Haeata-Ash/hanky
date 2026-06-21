@@ -3,7 +3,7 @@ import hashlib
 import pytest
 
 from hanky.media import CardMedia
-from hanky.ModelProcessor import ModelProcessor
+from hanky.processors import ModelProcessor
 
 
 def test_desired_name_is_sha256_of_data_plus_ext():

@@ -1,7 +1,7 @@
 import pytest
 
 from hanky.media import CardMedia
-from hanky.ModelProcessor import ModelProcessor
+from hanky.processors import ModelProcessor
 
 
 def compose(processors, card, **model_args):
