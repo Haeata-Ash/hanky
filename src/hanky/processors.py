@@ -9,6 +9,21 @@ SimpleMediaProcessor = Callable[[Dict[str, Any]], Tuple[Dict[str, str], CardMedi
 ManyMediaProcessor = Callable[[Dict[str, Any]], Tuple[Dict[str, str], List[CardMedia]]]
 
 
+class CardProcessingException(Exception):
+    """Raised when a user-defined card processor raises during execution."""
+
+    def __init__(self, processor, model=None, card=None, *args):
+        self.processor = processor
+        self.model = model
+        self.card = card
+        name = getattr(processor, "__name__", repr(processor))
+        super().__init__(
+            f"Error in card processor '{name}' for model '{model}' "
+            f"while processing card: {card}",
+            *args,
+        )
+
+
 class ModelProcessor:
     """The wrapper for user defined functions which process cards of a certain model.
 
@@ -73,7 +88,12 @@ class ModelProcessor:
                     f"Processor for {self.model} expects key word argument '{k}'. Ensure it is passed in via the --args option"
                 )
 
-        ret = self.f(card, **{k: kwargs[k] for k in self.expected_args})
+        # catch errors in processor and re throw indicating the name of the processor
+        try:
+            ret = self.f(card, **{k: kwargs[k] for k in self.expected_args})
+        except Exception as e:
+            raise CardProcessingException(self.f, self.model, card) from e
+
         # allow a processor to just return a card
         if isinstance(ret, dict):
             return ret, []

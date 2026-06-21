@@ -3,7 +3,7 @@ from typing import Any, Callable, Dict, List, Optional, Iterator, Sequence
 
 from anki.collection import Collection
 
-from hanky.ModelProcessor import ModelProcessor
+from hanky.processors import ModelProcessor
 from hanky.cli import make_parser
 from hanky.config import Config
 from hanky.fs import DEFAULT_LOADERS, Loader, has_handle
