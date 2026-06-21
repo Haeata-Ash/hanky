@@ -1,7 +1,9 @@
+from functools import partial
+
 import pytest
 
 from hanky.media import CardMedia
-from hanky.processors import ModelProcessor
+from hanky.processors import CardProcessingException, ModelProcessor
 
 
 def compose(processors, card, **model_args):
@@ -92,8 +94,6 @@ def test_accumulate_media_from_every_processor():
 
 
 def test_downstream_processor_sees_fields_written_by_an_upstream_one():
-    """card_fields of a later processor can be satisfied by an earlier one."""
-
     def producer(card):
         card["target-lang"] = "bonjour"
         return card
@@ -122,7 +122,7 @@ def test_missing_declared_arg_raises_keyerror_for_the_right_processor():
     ]
 
     with pytest.raises(KeyError, match="voice"):
-        compose(procs, {"Front": "x"})  # voice never supplied
+        compose(procs, {"Front": "x"})
 
 
 def test_missing_required_field_raises_keyerror():
@@ -130,3 +130,102 @@ def test_missing_required_field_raises_keyerror():
 
     with pytest.raises(KeyError, match="Back"):
         p({"Front": "x"})
+
+
+def test_error_in_processor_is_wrapped_in_card_processing_exception():
+    def boom(card):
+        raise ValueError("kaboom")
+
+    p = ModelProcessor("Basic", boom, [], [])
+
+    with pytest.raises(CardProcessingException):
+        p({"Front": "x"})
+
+
+def test_wrapped_exception_preserves_original_as_cause():
+    original = ValueError("kaboom")
+
+    def boom(card):
+        raise original
+
+    p = ModelProcessor("Basic", boom, [], [])
+
+    with pytest.raises(CardProcessingException) as exc_info:
+        p({"Front": "x"})
+
+    assert exc_info.value.__cause__ is original
+
+
+def test_wrapped_exception_names_the_failing_processor():
+    def translate(card):
+        raise RuntimeError("api down")
+
+    p = ModelProcessor("Basic", translate, [], [])
+
+    with pytest.raises(CardProcessingException, match="translate"):
+        p({"Front": "x"})
+
+
+def test_wrapped_exception_exposes_processor_attribute():
+    def translate(card):
+        raise RuntimeError("api down")
+
+    p = ModelProcessor("Basic", translate, [], [])
+
+    with pytest.raises(CardProcessingException) as exc_info:
+        p({"Front": "x"})
+
+    assert exc_info.value.processor is translate
+
+
+def test_validation_errors_are_not_wrapped_as_card_processing_exception():
+    missing_field = ModelProcessor("Basic", lambda card: card, [], ["Back"])
+    with pytest.raises(KeyError):
+        missing_field({"Front": "x"})
+    assert not isinstance(KeyError, CardProcessingException)
+
+    missing_arg = ModelProcessor("Basic", lambda card, voice: card, ["voice"], [])
+    with pytest.raises(KeyError) as exc_info:
+        missing_arg({"Front": "x"})
+    assert not isinstance(exc_info.value, CardProcessingException)
+
+
+def test_keyboard_interrupt_is_not_swallowed():
+    def interrupt(card):
+        raise KeyboardInterrupt
+
+    p = ModelProcessor("Basic", interrupt, [], [])
+
+    with pytest.raises(KeyboardInterrupt):
+        p({"Front": "x"})
+
+
+def test_wrapped_exception_includes_model_and_card_context():
+    def boom(card):
+        raise RuntimeError("api down")
+
+    p = ModelProcessor("French Vocab", boom, [], [])
+
+    with pytest.raises(CardProcessingException) as exc_info:
+        p({"Front": "chien"})
+
+    message = str(exc_info.value)
+    assert "French Vocab" in message
+    assert "chien" in message
+    assert exc_info.value.model == "French Vocab"
+    assert exc_info.value.card == {"Front": "chien"}
+
+
+def test_wrapping_works_for_callables_without_a_name():
+    def translate(card, lang):
+        raise RuntimeError("api down")
+
+    # partial is a valid Callable processor but has no __name__
+    proc = partial(translate, lang="fr")
+    p = ModelProcessor("Basic", proc, [], [])
+
+    with pytest.raises(CardProcessingException) as exc_info:
+        p({"Front": "x"})
+
+    assert exc_info.value.__cause__.args == ("api down",)
+    assert exc_info.value.processor is proc
