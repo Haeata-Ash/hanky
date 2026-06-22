@@ -2,3 +2,4 @@ hanky
 pandas
 openpyxl
 boto3
+beautifulsoup4
