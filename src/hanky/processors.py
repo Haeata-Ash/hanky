@@ -94,17 +94,30 @@ class ModelProcessor:
         except Exception as e:
             raise CardProcessingException(self.f, self.model, card) from e
 
-        # allow a processor to just return a card
+        # A processor may return any of:
+        #   - a card dict                        -> no media
+        #   - a (card, CardMedia) tuple          -> a single media item
+        #   - a (card, list[CardMedia]) tuple    -> many media items
         if isinstance(ret, dict):
-            return ret, []
-        # allow a processor to return a card and a single card media instance
-        elif isinstance(ret, tuple) and isinstance(ret[1], CardMedia):
-            return ret[0], [ret[1]]
-        elif isinstance(ret, tuple) and isinstance(ret[1], list):
-            return ret[0], ret[1]
-
-        # check successfully normalised to card and list of media
-        if not isinstance(ret[0], dict) or not isinstance(ret[1], list):
+            card = ret
+            media: List[CardMedia] = []
+        elif isinstance(ret, tuple) and len(ret) == 2:
+            card = ret[0]
+            if isinstance(ret[1], CardMedia):
+                media = [ret[1]]
+            else:
+                media = ret[1]
+        else:
             raise ValueError(
-                "Could not normalise processor return value to required return type"
+                "Card processor must return a card dict, a tuple of (card, media) "
+                "or a tuple of (card, [media,...])"
             )
+
+        # # check we successfully normalised to (card, l
+        if not isinstance(card, dict) or not isinstance(media, list):
+            raise ValueError(
+                "Could not normalise processor return to "
+                "type Tuple[Dict[str, str], List[CardMedia]]."
+            )
+
+        return card, media
