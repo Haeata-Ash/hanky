@@ -38,6 +38,19 @@ Issues = "https://github.com/Haeata-Ash/hanky/issues"
 # Development dependencies, managed by uv (PEP 735 dependency groups).
 # Installed by default with `uv sync`.
 [dependency-groups]
+demos = [
+  "pandas",
+  "openpyxl",
+  "boto3",
+  "beautifulsoup4",
+  "requests",
+  "pytest",
+  "pytest-cov",
+  "mypy",
+  "ruff",
+  "types-psutil",
+  "pre-commit",
+]
 dev = [
   "pytest",
   "pytest-cov",
@@ -47,10 +60,8 @@ dev = [
   "pre-commit",
 ]
 
-# --- Build backend (hatchling) -------------------------------------------
-# uv drives the project/dev workflow, but hatchling stays as the PEP 517
-# build backend because it supplies the dynamic version read from
-# src/hanky/__about__.py. uv calls this backend for `uv build`/`uv publish`.
+[tool.uv]
+default-groups = "all"
 
 [tool.hatch.version]
 path = "src/hanky/__about__.py"
