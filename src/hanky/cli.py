@@ -15,11 +15,6 @@ def make_parser(has_card_processors=False):
         "hanky",
         description="Simple program to allow programatic management of anki cards",
     )
-    parser.add_argument(
-        "--config",
-        dest="config",
-        help="Path to hanky toml configuration file",
-    )
 
     op_parser = parser.add_subparsers(
         dest="operation", help="Type of operation to perform", required=True
