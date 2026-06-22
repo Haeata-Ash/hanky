@@ -11,7 +11,7 @@ from hanky.media import CardMedia
 
 from anki.notes import NoteFieldsCheckResult
 
-_DEFAULT_CONFIG_PATH = Path("~/.config/hanky/hanky.toml").expanduser().as_posix()
+_DEFAULT_CONFIG_PATH = Path("~/.config/hanky/hanky.toml").expanduser()
 
 
 class Hanky:
@@ -29,25 +29,16 @@ class Hanky:
         loaders: dictionary of file extensions mapped to a function which reads card data
     """
 
-    def __init__(self, config_fname: Optional[str] = None, **options):
+    def __init__(self, config: Optional[Config] = None):
         """Initializes a Hanky application object
 
-        Args:
-            **options: key values to override/add to configuration data
-        """
-        # set default config to ensure needed fields are present
-        self.config: Config = Config()
-        config_fname = (
-            _DEFAULT_CONFIG_PATH
-            if config_fname is None and Path(_DEFAULT_CONFIG_PATH).is_file()
-            else config_fname
-        )
-        if config_fname:
-            self.config = self.config.from_toml(config_fname)
+        Note: if no config object is provided, hanky will try load from the default config location,
+        before finally using the default configuration values if the file does not exist.
 
-        # overwrite config with any runtime kwargs
-        if options:
-            self.config = self.config.update(**options)
+        Args:
+            config: custom config object
+        """
+        self._config = config
 
         # TODO: figure out a way to narrow this type so we don't have to ignore
         # It should never be none anyway after run is called
@@ -57,6 +48,25 @@ class Hanky:
         self.loaders: Dict[str, Callable[[str], Iterator[dict]]] = dict()
         for k, v in DEFAULT_LOADERS.items():
             self.register_loader(k, v)
+
+    @property
+    def config(self):
+        """Hanky application configuration. Lazy loaded on first use.
+
+        Note that if configuration is not provided, hanky will try to lazy load from
+        default config file location. If the file does not exist, hanky will use the
+        default configuration.
+
+        """
+        if self._config is not None:
+            return self._config
+
+        if _DEFAULT_CONFIG_PATH.is_file():
+            self._config = Config.from_toml(_DEFAULT_CONFIG_PATH.as_posix())
+        else:
+            self._config = Config()
+
+        return self._config
 
     @property
     def col(self) -> Collection:
@@ -441,11 +451,6 @@ def _run_app(app: Hanky, args: Optional[Sequence[str]] = None):
         parsed_args = parser.parse_args()
     else:
         parsed_args = parser.parse_args(args)
-
-    # read in configuration from user specified location,
-    # overwriting any existing config
-    if parsed_args.config:
-        app.config = app.config.from_toml(parsed_args.config)
 
     # model arguments we handle seperately
     # since can't check if they are present in

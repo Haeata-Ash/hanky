@@ -2,6 +2,7 @@ from pathlib import Path
 
 from anki.collection import Collection
 
+from hanky.config import Config
 from hanky.hanky import Hanky
 
 
@@ -22,9 +23,11 @@ def test_backup_written_to_configured_folder(tmp_path):
     backup_folder = tmp_path / "my_backups"
 
     app = Hanky(
-        ANKI_DB_PATH=str(db_path),
-        DO_SAFETY_CHECK=False,
-        BACKUP_FOLDER=str(backup_folder),
+        Config(
+            ANKI_DB_PATH=str(db_path),
+            DO_SAFETY_CHECK=False,
+            BACKUP_FOLDER=str(backup_folder),
+        ),
     )
     try:
         _ = app.col

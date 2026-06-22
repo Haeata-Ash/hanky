@@ -1,4 +1,5 @@
 import pytest
+from hanky.config import Config
 from hanky.hanky import Hanky
 
 
@@ -57,31 +58,7 @@ def test_add_card_missing_field_raises(app):
 
 def test_col_raises_when_db_path_missing(tmp_path):
     missing = tmp_path / "does_not_exist.anki2"
-    app = Hanky(ANKI_DB_PATH=str(missing), DO_SAFETY_CHECK=False)
+    app = Hanky(Config(ANKI_DB_PATH=str(missing), DO_SAFETY_CHECK=False))
 
     with pytest.raises(FileNotFoundError):
         _ = app.col
-
-
-def test_custom_config_path_is_loaded(tmp_path):
-    cfg = tmp_path / "custom.toml"
-    cfg.write_text("ALLOW_DUPLICATES = true\nDO_SAFETY_CHECK = false\n")
-
-    app = Hanky(config_fname=cfg)
-
-    assert app.config.ALLOW_DUPLICATES is True
-    assert app.config.DO_SAFETY_CHECK is False
-
-
-def test_runtime_options_override_config_file(tmp_path):
-    cfg = tmp_path / "custom.toml"
-    cfg.write_text("ALLOW_DUPLICATES = true\n")
-
-    app = Hanky(config_fname=str(cfg), ALLOW_DUPLICATES=False)
-
-    assert app.config.ALLOW_DUPLICATES is False
-
-
-def test_explicit_missing_config_path_raises(tmp_path):
-    with pytest.raises(FileNotFoundError):
-        Hanky(config_fname=tmp_path / "does_not_exist.toml")
