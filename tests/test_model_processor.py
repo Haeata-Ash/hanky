@@ -15,6 +15,11 @@ def compose(processors, card, **model_args):
     return card, media
 
 
+def _processor_returning(value):
+    """A ModelProcessor whose function returns ``value`` regardless of input."""
+    return ModelProcessor("Basic", lambda card: value, [], [])
+
+
 def test_two_processors_run_in_order():
     def add_back(card):
         card["Back"] = "translated"
@@ -229,3 +234,78 @@ def test_wrapping_works_for_callables_without_a_name():
 
     assert exc_info.value.__cause__.args == ("api down",)
     assert exc_info.value.processor is proc
+
+
+# --- return value normalisation -------------------------------------------
+# Every processor return shape should be normalised to
+# Tuple[Dict[str, str], List[CardMedia]].
+
+
+def test_bare_dict_is_normalised_to_card_and_empty_media():
+    card = {"Front": "x"}
+    p = _processor_returning(card)
+
+    result_card, media = p({"Front": "x"})
+
+    assert result_card is card
+    assert media == []
+
+
+def test_card_and_single_media_is_normalised_to_card_and_list():
+    m = CardMedia(b"audio", ".mp3")
+    p = _processor_returning(({"Front": "x"}, m))
+
+    result_card, media = p({"Front": "x"})
+
+    assert result_card == {"Front": "x"}
+    assert media == [m]
+
+
+def test_card_and_media_list_is_returned_as_is():
+    m1 = CardMedia(b"one", ".mp3")
+    m2 = CardMedia(b"two", ".mp3")
+    p = _processor_returning(({"Front": "x"}, [m1, m2]))
+
+    result_card, media = p({"Front": "x"})
+
+    assert result_card == {"Front": "x"}
+    assert media == [m1, m2]
+
+
+def test_card_and_empty_media_list_is_returned_as_is():
+    p = _processor_returning(({"Front": "x"}, []))
+
+    result_card, media = p({"Front": "x"})
+
+    assert result_card == {"Front": "x"}
+    assert media == []
+
+
+@pytest.mark.parametrize("bad_return", [None, 42, "card", ["Front", "x"]])
+def test_non_dict_non_tuple_return_raises_value_error(bad_return):
+    p = _processor_returning(bad_return)
+
+    with pytest.raises(ValueError, match="card dict"):
+        p({"Front": "x"})
+
+
+@pytest.mark.parametrize("bad_return", [({"Front": "x"},), ({"Front": "x"}, [], 1)])
+def test_tuple_of_wrong_length_raises_value_error(bad_return):
+    p = _processor_returning(bad_return)
+
+    with pytest.raises(ValueError, match="card dict"):
+        p({"Front": "x"})
+
+
+def test_tuple_with_unsupported_media_raises_value_error():
+    p = _processor_returning(({"Front": "x"}, "not-media"))
+
+    with pytest.raises(ValueError, match="normalise"):
+        p({"Front": "x"})
+
+
+def test_tuple_with_non_dict_card_raises_value_error():
+    p = _processor_returning(("not-a-dict", [CardMedia(b"a", ".mp3")]))
+
+    with pytest.raises(ValueError, match="normalise"):
+        p({"Front": "x"})
