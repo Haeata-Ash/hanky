@@ -292,12 +292,6 @@ class Hanky:
     ) -> int:
         """Load cards from any iterable of dictionaries into a deck.
 
-        This is the source-agnostic core of the loading pipeline. The cards
-        may come from anywhere that yields mappings of field names to values:
-        a file loader, a web API, a database query, a generator, etc. Each
-        item is run through the registered card processors for the model
-        before being added to the anki collection.
-
         Args:
             source: any iterable yielding dictionaries (mappings) of card
                 field names to values
