@@ -2,377 +2,361 @@
 
 [![Hatch project](https://img.shields.io/badge/%F0%9F%A5%9A-Hatch-4051b5.svg)](https://github.com/pypa/hatch)
 
-Hanky is an extendable command line application for adding anki flash cards from files.
+Hanky is an extendable cli tool which loads flash cards from files, transforms them, then adds them to
+Anki.
 
-While Hanky lets you load cards from files out of the box, its main feature is that it allows you to easily write your own python code which enriches or transforms your flash card data before adding them to Anki. 
+For example, a single hanky pipeline might take an English word and:
 
-For example by:
-- Enriching a language vocab card by generating audio using a [text to speech service](https://en.wikipedia.org/wiki/Speech_synthesis) such as [AWS Polly](https://docs.aws.amazon.com/polly/latest/dg/what-is.html)
-- Enriching a language vocab card by querying an API for a translation of the field of a card, perhaps with [Chat GPT](https://openai.com/api/) or [DeepL](https://developers.deepl.com/docs)
-- Normalising the fields of a card by ensuring all text is lower case
-- Generating images or html from latex snippets or other intermediate formats, for example with [SymPy](https://docs.sympy.org/latest/index.html)
+1. scrape a French translation and example sentence from a dictionary site, then
+2. generate spoken audio of that translation with a text-to-speech service,
 
+turning a one-column spreadsheet into rich, audio-enabled cards.
 
-This application was inspired by [genanki](https://github.com/kerrickstaley/genanki). Key differences:
-- Hanky only adds new notes/cards and media, genanki can also create models and modify existing cards/models
-- Hanky will add your cards for you automatically, genanki writes them to an anki package file which you have to manually upload to anki
-
-
-*Hanky is not affliated or associated with the [anki application/org](https://apps.ankiweb.net/).*
+*Hanky is not affiliated or associated with the [Anki application/org](https://apps.ankiweb.net/).*
 
 ## Table of Contents
 
 - [Installation](#installation)
 - [Quickstart](#quickstart)
-    - [Load Cards From a File](#load-cards-from-a-file)
-    - [Recursively Load Cards From A Directory](#recursively-load-cards-from-files-in-a-directory)
-    - [Example Hanky Script](#example-script)
 - [Configuration](#configuration)
-    - [Default Configuration](#default-configuration)
-- [Usage](#usage)
-    - [Command Line Usage](#command-line-application-usage)
+- [Card Processors & Pipelines](#card-processors--pipelines)
+  - [The processor contract](#the-processor-contract)
+  - [Pipelines with multiple processors](#pipelines-with-multiple-processors)
+  - [Attaching media](#attaching-media)
+- [Custom file loaders](#custom-file-loaders)
+- [CLI Reference](#cli-reference)
 - [Development](#development)
 - [Publishing](#publishing)
 
-
 ## Installation
 
-Install via pip:
-
-`pip install hanky`
+```sh
+pip install hanky
+```
 
 ## Quickstart
 
-For most users, no configuration will be neccessary. If you use a non standard anki user, i.e not 'User 1', please see the [configuration section](#configuration).
+The idea is simple. You extend hanky in your own python script `my_script.py` by writing functions called **card processors**. These functions contain the logic to transform cards. Hanky then handles the cli interface, calling your processors, and finally adding the cards to anki.
 
-Below are some quick examples of how Hanky can be used. For more details, see the [usage section](#usage)
+To illustrate what this looks like in practice, we will create a simple hanky script which ensures all the text on a card is lower case.
 
-### Load Cards From a File
 
-- Load cards from a csv called *animals.csv*, which has two columns *Front* and *Back*, into a deck called *french::animals*
-- Cards are of type or model *basic*
-
-`hanky load basic animals.csv -d "french::animals"`
-
-### Recursively Load Cards From Files in a Directory
-
-- Load cards from any csv files inside directory *french*. The csv files have columns *Front* and *Back*
-- Cards are of type or model *basic*
-
-`hanky load-dir "basic" "french/" "*.csv" -r`
-
-For example, given the following folder structure:
-```
-french
-├── animals.csv
-├── bodies.csv
-├── clothing.csv
-└── grammar
-    └── passe_compose.csv
-```
-
-The following decks will be created:
-- `french`: top level deck
-- `french::animals`: nested deck
-- `french::bodies`: nested deck
-- `french::clothing`: nested deck
-- `french::grammar`: nested container deck 
-- `french::grammar::passe_compose`: doubly nested deck
-
-### Example Script
-
-Create your hanky script, to extend hanky's behaviour. This example adds
-a card processor which transforms cards of type 'Language Learning' by
-adding French speech audio.
+See [Card Processors & Pipelines](#card-processors--pipelines) or the [demo folder](/demo/) for more complex, real world examples.
 
 ```python
+# my_script.py
 from hanky import Hanky
-import boto3
-import pandas
 
 
+# instantiate the hanky app
 hanky = Hanky()
 
-def french_tts(text):
-    """Generate french speech audio from text using aws polly"""
-    client = boto3.client("polly")
-    res = client.synthesize_speech(
-        Engine="neural", OutputFormat="mp3", Text=text, VoiceId="Lea"
-    )
 
-    return res["AudioStream"].read()
-
-# define our own excel card loader using the pandas library
-def excel_loader(f_obj: IO):
-    """Load cards fields and values from an excel file.
-
-    Args:
-        f_obj: file object to read from
-    Yields:
-        dictionary of fields mapped to there values.
-    """
-    df = pandas.read_excel(f_obj)
-    for _, row in df.iterrows():
-        yield row.to_dict()
+@hanky.card_processor("basic", expected_args=[], card_fields=[])
+def lowercase_card(card: dict):
+    """Lower-case the text on every field of the card."""
+    return {field: value.lower() for field, value in card.items()}
 
 
-# register the loader against ".xlsx" extension
-hanky.register_loader(".xlsx", excel_loader, is_text=False)
-
-
-
-@hanky.card_processor(
-    "Language Learning", expected_args=[], card_fields=["Front", "Back"]
-)
-def lang_model(card: dict):
-    """Transform cards of type/model 'Language Learning' by adding French speech.
-    We assume that the note type has already been created in anki with the following fields.
-        - Front
-        - Back
-        - Speech
-
-    The card type,'Language Learning' has the known language on the Front, while
-    the unknown language translation and its pronounciation speech is on the back.
-
-    For example:
-
-    ++++++++++++++++++++++++
-    +                      +
-    +      {{Front}}       +
-    +                      +
-    ++++++++++++++++++++++++
-
-    ++++++++++++++++++++++++
-    +                      +
-    +      {{Back}}        +
-    +      {{Speech}}      +
-    ++++++++++++++++++++++++
-
-    See [Adding a Note Type](https://docs.ankiweb.net/editing.html?highlight=template#adding-a-note-type)
-    to learn how to add a new note type to Anki.
-
-    See [Card Templates](https://docs.ankiweb.net/templates/intro.html)
-    to learn how to template fields onto the Front or Back of a Card.
-    """
-
-    # generate the speech. Use dedicated speech text if it exists, otherwise
-    # just use the back text
-    if "Speech" in card:
-        speech = french_tts(card["Speech"])
-    else:
-        speech = french_tts(card["Back"])
-
-    # add the mp3 data to anki
-    speech_ref = hanky.add_media(speech, file_ext=".mp3")
-
-    # put the reference to that media inside a field in the'Language Learning' model
-    # in this case there is a specific field, 'Speech'
-    card["Speech"] = speech_ref
-
-    return card
-
-
+# run the hanky cli application by running this python file, for example:
+#   python3 my_script.py load basic words.csv -d english::vocab
 hanky.run()
+
 ```
 
-Use your script to load french vocab from 'animals.csv' into a deck 'animals'
+### Running your hanky script
 
-`python3 my_script.py load french-vocab-model animals.csv`
+You run a hanky script like you would any other python script. 
 
-<!-- > **:information_source: Note:**
-> This project is currently in alpha and is not stable. -->
+Given **words.csv**:
+
+```csv
+Front,Back
+Serendipity,A Pleasant Surprise
+Ephemeral,Lasting A VERY Short Time
+```
+
+
+We would run our new script like so
+
+```sh
+python3 my_script.py load basic words.csv --deck english::vocab
+```
+
+Here we tell hanky to **load** each line of the **words.csv**, transform each line of the csv with the *lowercase_card* card processor, before finally adding each card, of type **basic**, into the anki deck **english::vocab**.
+
+This would leave us with a **english::vocab** deck containing the following cards:
+
+| Front | Back |
+| --- | --- |
+| serendipity | a pleasant surprise |
+| ephemeral | lasting a very short time |
+
+
+
+> **Note:** hanky only *adds* cards, media, and decks. The Anki **models/note types**
+> you load into must already exist in your collection — create them in Anki's UI
+> first. See [Adding a Note Type](https://docs.ankiweb.net/editing.html#adding-a-note-type).
 
 
 ## Configuration
 
-See below an overview of hanky's configuration options or jump to the [default configuration](#default-configuration) section. 
+There are two ways to configure Hanky; via a configuration file or via a configuration object. 
 
-### Configuration Locations
+**You will only need configuration if you do not use the default Anki profile (`User 1`).**
 
-- `~/.config/hanky/hanki.toml`: Default location which Hanky automatically checks for a configuration file. 
-- Alternatively, provide a path to another config file with the `--config` option
 
-### Configuration Options
-- `anki_database`: tells hanky where to find the anki collection (an sqlite database where anki stores flash cards and other data). Defaults to the following locations:
-    - Mac OS: `~/Library/Application Support/Anki2/User 1/collection.anki2`
-    - Linux: `~/.local/share/Anki2/User 1/collection.anki2`
-
-- `database_safety_check`: a boolean which when set to `true` will check for any running processes using the anki collection. Defaults to `true`.
-    > **:warning: Caution:** 
-    > Setting this option to false may result in database corruption. Always ensure your anki is backed up.
-
-- `allow_duplicates`: a boolean which when set to `true` allows duplicate cards to be added. A duplicate card is a card whose field values match another cards field values already in anki. Defaults to `false`.
-
-### Default configuration:
+#### 1. Via TOML file at `~/.config/hanky/hanky.toml`** (loaded automatically if present):
 
 ```toml
-# specifies where to find the anki collection (sqlite db where anki stores data)
-# If you are not using the default anki user, 'User 1', this option must be specified
-# DEFAULTS:
-# Mac OS: ~/Library/Application Support/Anki2/User 1/collection.anki2
-# Linux: ~/.local/share/Anki2/User 1/collection.anki2
-anki_database = "~/.local/share/Anki2/User 1/collection.anki2"
+# Path to the Anki collection (the sqlite db Anki stores cards in).
+# Required only if you do NOT use the default profile, "User 1".
+# Defaults:
+#   Linux:  ~/.local/share/Anki2/User 1/collection.anki2
+#   macOS:  ~/Library/Application Support/Anki2/User 1/collection.anki2
+ANKI_DB_PATH = "~/.local/share/Anki2/User 1/collection.anki2"
 
-# whether or not to check for other processes using the anki database
-# DEFAULTS: true
-database_safety_check = true
+# Check whether another process (e.g. Anki itself) is using the collection
+# before opening it. Default: true. Disabling this risks database corruption.
+DO_SAFETY_CHECK = true
 
-# whether or not to allow duplicate cards to be added
-# DEFAULTS: false
-allow_duplicates = false
+# Allow cards whose fields duplicate an existing card. Default: false.
+ALLOW_DUPLICATES = false
+
+# Where hanky writes a backup of the collection before modifying it.
+# Default: ~/.local/share/hanky/backups
+BACKUP_FOLDER = "~/.local/share/hanky/backups"
 ```
 
-## Usage 
+**2. A `Config` object passed to `Hanky(...)`** in your script (takes precedence
+over the file). Useful if you want different config for different scripts:
 
-Hanky can be used out of the box as a command line application, as well as extended with your own custom script.
-<!-- 
-## Basic Concepts
+```python
+from hanky import Hanky
+from hanky.config import Config
 
-### Model
-
-A model in this context refers to an *anki model* or *anki note type*. An *anki model* is essentially the data model for our cards, and defines the **fields** which all cards using that model will have. For example, a model which anki has out of the box is the *basic* model. The *basic* model has two fields, *Front*, and *Back*. When the user creates a new card of type *basic*, they set the values of *Front* and *Back* which are then placed in a template and displayed to the user.
-
-Hanky allows you to write your own code to process cards which belong to a particular model. For example,  -->
-### Command Line Application Usage
-
-Both the out of the box hanky command line application and any of your custom scripts will have the same interface.
-
-
-`[hanky script] [operation] [model] [file|directory]`
-
-- `[hanky script]`: Either the `hanky` executable OR your own script, `python3 my_script.py`
-- `[operation]`: The operation to perform, one of `load` which reads cards in from a file and `load-dir` which reads cards from potentially many files inside a directory
-- `[model]`: The name of the **anki model**, also known as card type which the cards being read in belong to. Anki comes pre installed with several models, such as the *basic* model which comes with two **fields**, *Front* and *Back*. Each model or card type has potentially several *card templates*, which reference the anki fields and tell anki what to display. You can create your own custom models/note types through the UI.
-- `[file|directory]`: The file or the directory to read the cards from
-
-### Loading Cards from a File
-
-```
-$ hanky load -h                                                                                                                                             
-usage: hanky load [-h] [-d DECK] model file
-
-positional arguments:
-  model                 Name of the anki model to create cards with.
-  file                  Path of the file to load from
-
-options:
-  -h, --help            show this help message and exit
-  -d DECK, --deck DECK  Name of the deck to load cards into. If not specified, defaults to the filename without the extension.
-```
-#### Load cards of model *lang-vocab* from a csv file called *countries.csv*, using the filemame without the extension as the deckname. Creates or updates a deck called *countries*.
-- `hanky load "basic" ~/my-folder/countries.csv`
-
-#### Load cards of model *lang-vocab* from a json file called *countries.json*, specifying a deckname of *african-countries*. Creates or updates a deck called *african-countries*.
-- `hanky load "basic" ~/my-folder/countries.json -d african-countries`
-
-### Loading Cards From Files in a Directory
-```
-usage: hanky load-dir [-h] [-r] model dir pattern
-
-positional arguments:
-  model            Name of the anki model to create cards with.
-  dir              Path of the file to load from
-  pattern          Glob pattern used to decide which files to load. For example, '*.csv'
-
-options:
-  -h, --help       show this help message and exit
-  -r, --recursive  If loading files from a directory, recursively load from files in sub directories as well.
+hanky = Hanky(config=Config(ALLOW_DUPLICATES=True))
 ```
 
-#### Load all csv files in a folder as decks of cards using the *basic* anki model/note type. The relative path of the files from the specified folder will be used as the deck name. 
-- `hanky load-dir "basic" "~/french/" "*.csv"`
+## Card Processors & Pipelines
 
-Given the following file structure:
-```
-french
-├── animals.csv
-├── bodies.csv
-├── clothing.csv
-└── grammar
-    └── passe_compose.csv
-```
+A **card processor** is a Python function that runs on each card *before* it is
+added to Anki. You could use one to enrich a card (fetch a translation, generate audio) or
+transform it (lower-case a field, render LaTeX).
 
-The following decks will be created:
-- **french**
-- **french::animals**
-- **french::bodies**
-- **french::clothing**
+Multiple processors can be registered on a `Hanky` app to create a pipeline.
 
-#### Recursively load all json files as decks of cards using the *lang-vocab* anki model/note type. The relative path of the files from the specified folder will be used as the deck name. 
+### The processor contract
 
-`hanky load-dir "lang-vocab" "~/french/" "*.json" -r`
+A processor is registered with three things:
 
-For example, given the following folder structure:
-```
-french
-├── animals.csv
-├── bodies.csv
-├── clothing.csv
-└── grammar
-    └── passe_compose.csv
+```python
+@hanky.card_processor(model, expected_args=[...], card_fields=[...])
+def my_processor(card: dict, **expected_args):
+    ...
 ```
 
-The following decks will be created:
-- **french**
-- **french::animals**
-- **french::bodies**
-- **french::clothing**
-- **french::grammar**
-- **french::grammar::passe_compose**
+| Part | Meaning |
+| --- | --- |
+| `model` | The Anki model/note-type name. The processor runs on every card of this model. |
+| `card_fields` | Fields that **must already be present** on the card when this processor runs. Hanky checks this and raises a clear error if one is missing. It lets a processor declare what an *earlier* step must have produced. |
+| `expected_args` | Names of CLI arguments the processor needs. They are passed in from the command line via `--args key=value` and arrive as keyword arguments. For example, you might have the same pipeline for different languages, so you would pass in `lang=german` or `lang=french`|
 
-The created anki decks will have the following structure:
+When hanky calls your processors, the first argument is always the `card`; a plain `dict` representing a a cards fields. Any declared `expected_args` are then passed in as key word arguments. So if you declared
+
+
+```python
+@hanky.card_processor(model, expected_args=["lang"], card_fields=[...])
+def my_processor(card: dict, lang):
+    ...
 ```
-french
-├── animals
-├── bodies
-├── clothing
-└── grammar
-    └── passe_compose
+
+Your processor could be called like:
+
+```python
+my_processor(card, lang="german")
 ```
+
+
+A processor must **return** one of:
+
+- `card` — the (modified) dict, when it adds no media;
+- `(card, media)` — a card plus a single [`CardMedia`](#attaching-media);
+- `(card, [media, ...])` — a card plus a list of media.
+
+Whatever changes a processor makes to a `card` become visible to every processor
+that runs after it.
+
+### Pipelines with multiple processors
+
+If you register more than one processor they form a pipeline. They run in the order you registered them, each receiving the card in the state the previous one returned it. 
+
+This example below builds flash cards for learning french vocabulary as an english speaker. Given a spreadsheet whose only column is `word`:
+
+
+| Word |
+| --- |
+| thanks |
+| hello |
+| ... |
+| goodbye |
+
+We want to creates flash cards with the french translation/definition, an example sentence (in both french and english), and french speech audio for the example sentence.
+
+The two processors in our pipeline will be:
+
+1. `scrape_translation`: takes an english `word` and scrapes a website to produce a `translation` and an `example`.
+2. `add_audio` — takes the `translation` and `example` produced in step 1 then produces French
+   audio.
+
+Note that for brevity the `scrape_wordreference` and `generate_neural_speech` functions are not included. See the [full demo file](/demo/demo_scrape.py) for the complete code.
+
+```python
+from hanky import CardMedia, Hanky
+
+def scrape_wordreference(word: str, lang_pair: str) -> tuple[str, str]:
+    ...
+
+def generate_neural_speech(utf_8_str: str, voice: str) -> bytes:
+    ...
+
+hanky = Hanky()
+
+# Stage 1: requires `word` (this comes straight from the csv), produces `translation` + `example`.
+@hanky.card_processor("lang-vocab", expected_args=[], card_fields=["word"])
+def scrape_translation(card: dict):
+    translation, example = scrape_wordreference(card["word"], "enfr")
+    card["translation"] = translation
+    card["example"] = example
+    return card
+
+# Stage 2: requires `translation` (from stage 1), attaches audio media.
+@hanky.card_processor("lang-vocab", expected_args=[], card_fields=["translation"])
+def add_audio(card: dict):
+    speech = generate_neural_speech(card["translation"], voice="Lea")
+    audio = CardMedia(speech, ".mp3")
+    card["translation-audio"] = audio.media_ref
+    return card, [audio]
+
+hanky.run()
+```
+
+Then we would run the script like normal. `python3 my_script.py load lang-vocab words.xlsx -d french::vocab`
+
+> Note that we are no longer using a *basic* model. That means we are assuming that a model called *lang-vocab* has already been created in the anki ui. See the [Anki documentation for adding a note type](https://docs.ankiweb.net/editing.html#adding-a-note-type) to learn how this is done.
+
+
+### Attaching media
+
+Anki handles media seperately to flash cards, so Hanky does as well. 
+
+To add audio (or other media), you create `CardMedia` objects, add a reference to the media via `.media_ref` onto your card before finally returning the `CardMedia` object from the processor. 
+
+The `CardMedia` objects are created from raw bytes and a file extension `CardMedia(audio_bytes, ".mp3")`or from an existing file `CardMedia.from_file("my_sound_file.mp3")`.
+
+```python
+audio = CardMedia(mp3_bytes, ".mp3")
+card["Speech"] = audio.media_ref
+return card, [audio]
+```
+
+`media_ref` is how anki knows where the media should go, so it must be placed somewhere on the card. Hanky will make sure that the data will end up in Anki's media store.
+
+Supported media is currently only audio: `.mp3`, `.oga`, `.opus`, `.wav`, `.weba`, `.aac`. 
+
+## Custom file loaders
+
+To load formats beyond CSV/JSON, register a loader against a file extension. A
+loader takes an open file object and yields one `dict` per card. Once registered,
+that extension works everywhere — `load`, `load-dir`, and through your pipelines.
+
+```python
+import pandas
+
+def excel_loader(f_obj):
+    df = pandas.read_excel(f_obj)
+    for _, row in df.iterrows():
+        yield row.to_dict()
+
+# is_text=False because .xlsx must be opened in binary mode
+hanky.register_loader(".xlsx", excel_loader, is_text=False)
+```
+
+## CLI Reference
+
+Both the `hanky` command and your own scripts share the same interface:
+
+```
+[hanky | python3 my_script.py] <operation> <model> <file|dir> [pattern] [options]
+```
+
+**`load`** — load cards from a single file:
+
+```
+hanky load [-h] [-d DECK] [--args K=V ...] model file
+  model        Anki model/note-type name to create cards with.
+  file         File to load from (.csv, .json, or a registered extension).
+  -d, --deck   Destination deck. Defaults to the filename without extension.
+  --args       key=value args forwarded to your card processors (scripts only).
+```
+
+**`load-dir`** — load many files from a directory, deriving deck names from paths:
+
+```
+hanky load-dir [-h] [-r] [--args K=V ...] model dir pattern
+  model            Anki model/note-type name to create cards with.
+  dir              Directory to load from.
+  pattern          Glob selecting files, e.g. "*.csv".
+  -r, --recursive  Also descend into sub-directories.
+  --args           key=value args forwarded to your card processors (scripts only).
+```
+
+For example, to load every CSV under `french/` while building deck names from
+the folder structure:
+
+```sh
+hanky load-dir basic "french/" "*.csv" -r
+```
+
+```
+french/                        decks created
+├── animals.csv          ->    french::animals
+├── bodies.csv           ->    french::bodies
+└── grammar/
+    └── passe_compose.csv ->   french::grammar::passe_compose
+```
+
+CSV (`.csv`) and JSON (`.json`) files work with no setup. The column/key names in
+your file must match the field names of the Anki model you target.
+
 
 ## Development
 
-This project uses [uv](https://docs.astral.sh/uv/). 
-
-To Install dependencies (note this does not install the option tos dependecies):
-
-```
-uv sync
-```
-
-Run tests:
-
-```
-uv run pytest
+```sh
+uv sync                    # install dependencies (incl. dev + demo groups)
+uv run pytest              # run tests (CI runs Python 3.11, 3.12, 3.13)
+uv run ruff format .       # format
+uv run ruff check .        # lint
+uv run mypy src/hanky      # type check
 ```
 
-Note tests run against Python 3.11, 3.12 and 3.13 in CI. 
-
-
-Linting, formatting and type checking.
-
-```
-uv run ruff format .         # format
-uv run ruff check .          # lint
-uv run mypy src/hanky        # type check
-```
-
-## Publishing If You Are Me
+## Publishing
 
 1. Bump `__version__` in `src/hanky/__about__.py`.
 2. Build the distributions:
 
-   ```
+   ```sh
    rm -rf dist && uv build
    ```
 
-3. Publish, PyPI API token needs to be in the environment `UV_PUBLISH_TOKEN`:
+3. Publish (needs a PyPI API token in `UV_PUBLISH_TOKEN`):
 
-   ```
+   ```sh
    uv publish
    ```
 
-4. Sanity check
-    ```
-    uv run --with hanky --refresh-package hanky --no-project -- python -c "import hanky"
-    ```
+4. Sanity check:
+
+   ```sh
+   uv run --with hanky --refresh-package hanky --no-project -- python -c "import hanky"
+   ```
