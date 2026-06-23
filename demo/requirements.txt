@@ -3,3 +3,4 @@ pandas
 openpyxl
 boto3
 beautifulsoup4
+nltk

@@ -50,6 +50,7 @@ demos = [
   "ruff",
   "types-psutil",
   "pre-commit",
+  "nltk>=3.9.4",
 ]
 dev = [
   "pytest",
