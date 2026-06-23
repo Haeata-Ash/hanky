@@ -1,5 +1,15 @@
 from pathlib import Path
-from typing import Any, Callable, Dict, List, Optional, Iterator, Sequence
+from typing import (
+    Any,
+    Callable,
+    Dict,
+    Iterable,
+    Iterator,
+    List,
+    Mapping,
+    Optional,
+    Sequence,
+)
 
 from anki.collection import Collection
 
@@ -273,27 +283,29 @@ class Hanky:
         """Get the loader function for a particular file extension"""
         return self.loaders[suffix]
 
-    def load_deck(
+    def load_cards(
         self,
-        fpath: str,
+        source: Iterable[Mapping],
         model_name: str,
-        deck_name: Optional[str] = None,
+        deck_name: str,
         **model_args,
     ) -> int:
-        """Load cards from a file into a deck.
+        """Load cards from any iterable of dictionaries into a deck.
 
         Args:
-            fpath: the path to the file
-            model_name: The anki model/card type of the cards in the file
-            deck_name: Optionally the name of the deck. Defaults to the
-                filename without its extension.
+            source: any iterable yielding dictionaries (mappings) of card
+                field names to values
+            model_name: The anki model/card type of the cards
+            deck_name: the name of the destination deck
             **model_args: arguments to provide to the card processor functions
 
         Returns:
             int, the number of cards successfully loaded
-        """
-        path = Path(fpath).absolute()
 
+        Raises:
+            KeyError: the model does not exist in the collection
+            ValueError: an item yielded by the source is not a mapping
+        """
         transformers = self.get_model_processors(model_name)
 
         model = self.col.models.by_name(model_name)
@@ -302,13 +314,16 @@ class Hanky:
                 f"Model '{model_name}' does not exist in your anki collection. Ensure it has been added before using it with hanky."
             )
 
-        # deck is the specified name or filename without extension
-        deck_name = deck_name if deck_name else path.stem
         self.add_deck(deck_name)
 
         count = 0
         total = 0
-        for item in self.get_loader(path.suffix)(str(path.absolute())):
+        for item in source:
+            if not isinstance(item, Mapping):
+                raise ValueError(
+                    f"Card source for model '{model_name}' yielded a "
+                    f"{type(item).__name__}, expected a dictionary (mapping)."
+                )
             card = dict(item)
             media: List[CardMedia] = []
             for t in transformers:
@@ -331,6 +346,36 @@ class Hanky:
                 count += 1
 
         return count
+
+    def load_deck(
+        self,
+        fpath: str,
+        model_name: str,
+        deck_name: Optional[str] = None,
+        **model_args,
+    ) -> int:
+        """Load cards from a file into a deck.
+
+        Reads the file using the loader registered for its extension and feeds
+        the resulting dictionaries into :meth:`load_cards`.
+
+        Args:
+            fpath: the path to the file
+            model_name: The anki model/card type of the cards in the file
+            deck_name: Optionally the name of the deck. Defaults to the
+                filename without its extension.
+            **model_args: arguments to provide to the card processor functions
+
+        Returns:
+            int, the number of cards successfully loaded
+        """
+        path = Path(fpath).absolute()
+
+        # deck is the specified name or filename without extension
+        deck_name = deck_name if deck_name else path.stem
+
+        source = self.get_loader(path.suffix)(str(path))
+        return self.load_cards(source, model_name, deck_name, **model_args)
 
     def add_media(
         self,
