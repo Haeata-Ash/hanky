@@ -24,6 +24,7 @@ turning a one-column spreadsheet into rich, audio-enabled cards.
   - [Pipelines with multiple processors](#pipelines-with-multiple-processors)
   - [Attaching media](#attaching-media)
 - [Custom file loaders](#custom-file-loaders)
+- [Examples](#examples)
 - [CLI Reference](#cli-reference)
 - [Development](#development)
 - [Publishing](#publishing)
@@ -281,6 +282,28 @@ def excel_loader(f_obj):
 # is_text=False because .xlsx must be opened in binary mode
 hanky.register_loader(".xlsx", excel_loader, is_text=False)
 ```
+
+## Examples
+
+Complete, runnable scripts live in the [`demo/`](demo/) directory, ordered here
+from simplest to most involved. Install their dependencies with
+`pip install -r demo/requirements.txt`.
+
+- [`demo_lowercase.py`](demo/demo_lowercase.py) — The minimal example: a single,
+  dependency-free processor that lower-cases every field on a card.
+- [`demo_define.py`](demo/demo_define.py) — A single processor that fills the
+  back of each card with a dictionary definition of the word on its front,
+  looked up offline via WordNet (NLTK).
+- [`demo_audio.py`](demo/demo_audio.py) — Registers a custom `.xlsx` loader and uses AWS
+  Polly to attach text-to-speech audio, choosing the language from a CLI
+  argument (`--args lang=french`).
+- [`demo_scrape.py`](demo/demo_scrape.py) — A two-stage English→French pipeline
+  that scrapes a translation and example sentence from WordReference, then
+  voices the translation with AWS Polly.
+- [`demo_example_sentences.py`](demo/demo_example_sentences.py) — A three-stage
+  English→French pipeline that scrapes a translation from WordReference, asks
+  Claude for an example sentence at a given CEFR level, then adds French audio
+  for both the word and the sentence with AWS Polly.
 
 ## CLI Reference
 
