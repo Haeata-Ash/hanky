@@ -24,6 +24,7 @@ turning a one-column spreadsheet into rich, audio-enabled cards.
   - [Pipelines with multiple processors](#pipelines-with-multiple-processors)
   - [Attaching media](#attaching-media)
 - [Custom file loaders](#custom-file-loaders)
+- [Loading from non-file sources](#loading-from-non-file-sources)
 - [Examples](#examples)
 - [CLI Reference](#cli-reference)
 - [Development](#development)
@@ -283,6 +284,43 @@ def excel_loader(f_obj):
 hanky.register_loader(".xlsx", excel_loader, is_text=False)
 ```
 
+## Loading from non-file sources
+
+The CLI loads cards from files, but you can also build cards in your own script
+and add them by calling `load_cards` directly. It takes any iterable of dicts,
+one dict per card, so the source can be a list, a generator, rows from an API,
+or anything else.
+
+```python
+import random
+
+from hanky import Hanky
+
+DICTIONARY = {
+    "ephemeral": "lasting for a very short time",
+    "serendipity": "the occurrence of happy events by chance",
+    "petrichor": "the smell of rain falling on dry ground",
+    "lucid": "expressed clearly and easy to understand",
+    "gregarious": "fond of the company of others; sociable",
+    # ...
+}
+
+hanky = Hanky()
+
+
+def random_word_cards(n):
+    for word in random.sample(list(DICTIONARY), n):
+        yield {"Front": word, "Back": DICTIONARY[word]}
+
+
+# add 20 cards straight from the generator, with no file involved
+report = hanky.load_cards(random_word_cards(20), "basic", "english::vocab")
+print(f"Added {report.added}, skipped {report.skipped}, failed {report.failed}.")
+```
+
+`load_cards` runs the same processor pipeline as the CLI and returns a
+`LoadReport` with counts of the cards that were added, skipped, and failed.
+
 ## Examples
 
 Complete, runnable scripts live in the [`demo/`](demo/) directory, ordered here
@@ -291,6 +329,8 @@ from simplest to most involved. Install their dependencies with
 
 - [`demo_lowercase.py`](demo/demo_lowercase.py) — The minimal example: a single,
   dependency-free processor that lower-cases every field on a card.
+- [`demo_random_words.py`](demo/demo_random_words.py) — A non-file source: builds
+  cards from an in-script word list and adds them with `load_cards`.
 - [`demo_define.py`](demo/demo_define.py) — A single processor that fills the
   back of each card with a dictionary definition of the word on its front,
   looked up offline via WordNet (NLTK).
@@ -316,21 +356,25 @@ Both the `hanky` command and your own scripts share the same interface:
 **`load`** — load cards from a single file:
 
 ```
-hanky load [-h] [-d DECK] [--args K=V ...] model file
-  model        Anki model/note-type name to create cards with.
-  file         File to load from (.csv, .json, or a registered extension).
-  -d, --deck   Destination deck. Defaults to the filename without extension.
-  --args       key=value args forwarded to your card processors (scripts only).
+hanky load [-h] [-d DECK] [--fail-fast] [--args K=V ...] model file
+  model         Anki model/note-type name to create cards with.
+  file          File to load from (.csv, .json, or a registered extension).
+  -d, --deck    Destination deck. Defaults to the filename without extension.
+  --fail-fast   Stop and raise on the first card that can't be added, instead
+                of skipping it and reporting it at the end.
+  --args        key=value args forwarded to your card processors (scripts only).
 ```
 
 **`load-dir`** — load many files from a directory, deriving deck names from paths:
 
 ```
-hanky load-dir [-h] [-r] [--args K=V ...] model dir pattern
+hanky load-dir [-h] [-r] [--fail-fast] [--args K=V ...] model dir pattern
   model            Anki model/note-type name to create cards with.
   dir              Directory to load from.
   pattern          Glob selecting files, e.g. "*.csv".
   -r, --recursive  Also descend into sub-directories.
+  --fail-fast      Stop and raise on the first card that can't be added, instead
+                   of skipping it and reporting it at the end.
   --args           key=value args forwarded to your card processors (scripts only).
 ```
 
