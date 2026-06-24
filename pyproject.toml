@@ -16,7 +16,7 @@ classifiers = [
 ]
 
 keywords = ["anki"]
-dynamic = ["version"]
+version = "0.1.0.dev1"
 
 dependencies = [
   "anki",
@@ -63,9 +63,6 @@ dev = [
 
 [tool.uv]
 default-groups = "all"
-
-[tool.hatch.version]
-path = "src/hanky/__about__.py"
 
 [tool.hatch.build.targets.sdist]
 exclude = [
