@@ -34,9 +34,9 @@ def test_load_deck_reads_a_single_object_json_file(app, tmp_path):
     fpath = tmp_path / "french.json"
     fpath.write_text(json.dumps({"Front": "bonjour", "Back": "hello"}))
 
-    count = app.load_deck(str(fpath), "Basic")
+    report = app.load_deck(str(fpath), "Basic")
 
-    assert count == 1
+    assert report.added == 1
     assert app.col.note_count() == 1
 
 
@@ -59,7 +59,7 @@ def test_load_deck_reads_an_uppercase_extension(app, tmp_path):
     fpath = tmp_path / "FRENCH.CSV"
     fpath.write_text("Front,Back\nbonjour,hello\n")
 
-    count = app.load_deck(str(fpath), "Basic")
+    report = app.load_deck(str(fpath), "Basic")
 
-    assert count == 1
+    assert report.added == 1
     assert app.col.note_count() == 1

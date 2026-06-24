@@ -18,6 +18,7 @@ from hanky.cli import make_parser
 from hanky.config import Config
 from hanky.fs import DEFAULT_LOADERS, Loader, has_handle, make_file_loader
 from hanky.media import CardMedia
+from hanky.report import CardError, LoadReport
 
 from anki.notes import NoteFieldsCheckResult
 
@@ -287,23 +288,29 @@ class Hanky:
         source: Iterable[Mapping],
         model_name: str,
         deck_name: str,
+        fail_fast: bool = False,
         **model_args,
-    ) -> int:
+    ) -> LoadReport:
         """Load cards from any iterable of dictionaries into a deck.
+
+        By default a card that cannot be added is recorded then skipped and loading
+        continues with the next card. Pass ``fail_fast=True`` to instead raise
+        on the first such card.
 
         Args:
             source: any iterable yielding dictionaries (mappings) of card
                 field names to values
             model_name: The anki model/card type of the cards
             deck_name: the name of the destination deck
+            fail_fast: raise on the first bad card instead of collecting it
             **model_args: arguments to provide to the card processor functions
 
         Returns:
-            int, the number of cards successfully loaded
+            A :class:`LoadReport` describing what was added, skipped and failed.
 
         Raises:
             KeyError: the model does not exist in the collection
-            ValueError: an item yielded by the source is not a mapping
+            Exception: if ``fail_fast`` is set, whatever a bad card raised
         """
         transformers = self.get_model_processors(model_name)
 
@@ -315,44 +322,47 @@ class Hanky:
 
         self.add_deck(deck_name)
 
-        count = 0
-        total = 0
+        added = 0
+        skipped = 0
+        errors: List[CardError] = []
         for item in source:
-            if not isinstance(item, Mapping):
-                raise ValueError(
-                    f"Card source for model '{model_name}' yielded a "
-                    f"{type(item).__name__}, expected a dictionary (mapping)."
-                )
-            card = dict(item)
-            media: List[CardMedia] = []
-            for t in transformers:
-                card, new_media = t(card, **model_args)
-                media += new_media
+            try:
+                if not isinstance(item, Mapping):
+                    raise ValueError(
+                        f"Card source for model '{model_name}' yielded a "
+                        f"{type(item).__name__}, expected a dictionary (mapping)."
+                    )
+                card = dict(item)
+                media: List[CardMedia] = []
+                for t in transformers:
+                    card, new_media = t(card, **model_args)
+                    media += new_media
 
-            # TODO: we are leaving the media in the db even if the card isn't
-            # added
-            for m in media:
-                actual_fname = self.add_media(m.data, m.desired_name)
-                m.replace_temp_refs(actual_fname, card)
+                # TODO: we are leaving the media in the db even if the card
+                # isn't added
+                for m in media:
+                    actual_fname = self.add_media(m.data, m.desired_name)
+                    m.replace_temp_refs(actual_fname, card)
 
-            ret = self.add_card(
-                deck_name,
-                model_name,
-                **card,
-            )
-            total += 1
-            if ret:
-                count += 1
+                if self.add_card(deck_name, model_name, **card):
+                    added += 1
+                else:
+                    skipped += 1
+            except Exception as e:
+                if fail_fast:
+                    raise
+                errors.append(CardError(card=item, error=str(e)))
 
-        return count
+        return LoadReport(added=added, skipped=skipped, errors=errors)
 
     def load_deck(
         self,
         fpath: str,
         model_name: str,
         deck_name: Optional[str] = None,
+        fail_fast: bool = False,
         **model_args,
-    ) -> int:
+    ) -> LoadReport:
         """Load cards from a file into a deck.
 
         Reads the file using the loader registered for its extension and feeds
@@ -363,10 +373,12 @@ class Hanky:
             model_name: The anki model/card type of the cards in the file
             deck_name: Optionally the name of the deck. Defaults to the
                 filename without its extension.
+            fail_fast: raise on the first bad card instead of collecting it
             **model_args: arguments to provide to the card processor functions
 
         Returns:
-            int, the number of cards successfully loaded
+            A :class:`LoadReport`, with the file path recorded against any
+            errors.
         """
         path = Path(fpath).absolute()
 
@@ -374,7 +386,10 @@ class Hanky:
         deck_name = deck_name if deck_name else path.stem
 
         source = self.get_loader(path.suffix)(str(path))
-        return self.load_cards(source, model_name, deck_name, **model_args)
+        report = self.load_cards(
+            source, model_name, deck_name, fail_fast=fail_fast, **model_args
+        )
+        return report.with_source(str(path))
 
     def add_media(
         self,
@@ -406,8 +421,9 @@ class Hanky:
         root_dir: str,
         glob_pattern: str,
         recursive=False,
+        fail_fast: bool = False,
         **model_args,
-    ) -> int:
+    ) -> LoadReport:
         """Load cards from file(s) inside a directory.
 
         The deck names are built from the relative paths of each file from the
@@ -433,10 +449,11 @@ class Hanky:
             root_dir: The root directory in which to find the files
             glob_pattern: A glob pattern such as '*.csv' to match the desired files
             recursive: whether or not to descend into sub directories, defaults to false
+            fail_fast: raise on the first bad card instead of collecting it
             **model_args: arguments to provide to the card processor functions
 
         Returns:
-            int, the number of cards successfully loaded
+            A :class:`LoadReport` aggregating the results across every file.
         """
         root = Path(root_dir).expanduser()
 
@@ -450,7 +467,7 @@ class Hanky:
                 for path in root.glob(pattern):
                     yield path
 
-        num_cards_loaded = 0
+        report = LoadReport()
         for path in _glob(root, glob_pattern, recursive):
             if path.is_file():
                 path = path.relative_to(root)
@@ -468,14 +485,15 @@ class Hanky:
                 deck_list.append(path.stem)
                 full_deck = "::".join(deck_list)
 
-                num_cards_loaded += self.load_deck(
+                report += self.load_deck(
                     str(abs_path),
                     model,
                     deck_name=full_deck,
+                    fail_fast=fail_fast,
                     **model_args,
                 )
 
-        return num_cards_loaded
+        return report
 
     def run(self) -> None:
         """Run the Hanky object as a CLI application. Useful for people extending the
@@ -505,24 +523,37 @@ def _run_app(app: Hanky, args: Optional[Sequence[str]] = None):
     except AttributeError:
         pass
 
-    cards_added = 0
+    report = LoadReport()
     if parsed_args.operation == "load":
         print(f"Loading into deck {parsed_args.deck} from file {parsed_args.file}")
-        cards_added = app.load_deck(
+        report = app.load_deck(
             parsed_args.file,
             parsed_args.model,
             deck_name=parsed_args.deck,
+            fail_fast=parsed_args.fail_fast,
             **model_args,
         )
 
     elif parsed_args.operation == "load-dir":
         print(f"Loading from dirrectory {parsed_args.dir}")
-        cards_added = app.load_dir(
+        report = app.load_dir(
             parsed_args.model,
             parsed_args.dir,
             parsed_args.pattern,
             parsed_args.is_rec,
+            fail_fast=parsed_args.fail_fast,
             **model_args,
         )
 
-    print(f"Added {cards_added} cards.")
+    _print_report(report)
+
+
+def _print_report(report: LoadReport) -> None:
+    """Print a human readable summary of a load operation to stdout."""
+    print(
+        f"Added {report.added}, skipped {report.skipped}, "
+        f"failed {report.failed} (of {report.total} cards)."
+    )
+    for err in report.errors:
+        where = f" [{err.source}]" if err.source else ""
+        print(f"  failed{where}: {err.error}")

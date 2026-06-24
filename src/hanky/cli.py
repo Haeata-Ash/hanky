@@ -32,6 +32,13 @@ def make_parser(has_card_processors=False):
         default=None,
         help="Name of the deck to load cards into. If not specified, defaults to the filename without the extension.",
     )
+    load_file.add_argument(
+        "--fail-fast",
+        dest="fail_fast",
+        action="store_true",
+        default=False,
+        help="Stop and raise on the first card that cannot be added, instead of skipping it and reporting at the end.",
+    )
     if has_card_processors:
         load_file.add_argument(
             "--args",
@@ -59,6 +66,13 @@ def make_parser(has_card_processors=False):
     load_dir.add_argument(
         "pattern",
         help="Glob pattern used to decide which files to load. For example, '*.csv'",
+    )
+    load_dir.add_argument(
+        "--fail-fast",
+        dest="fail_fast",
+        action="store_true",
+        default=False,
+        help="Stop and raise on the first card that cannot be added, instead of skipping it and reporting at the end.",
     )
 
     if has_card_processors:
