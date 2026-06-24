@@ -13,7 +13,7 @@ from typing import (
 
 from anki.collection import Collection
 
-from hanky.processors import ModelProcessor
+from hanky.processors import CardProcessingException, ModelProcessor
 from hanky.cli import make_parser
 from hanky.config import Config
 from hanky.fs import DEFAULT_LOADERS, Loader, has_handle, make_file_loader
@@ -224,7 +224,7 @@ class Hanky:
         if model_name not in self.processors:
             self.processors[model_name] = []
         self.processors[model_name].append(
-            ModelProcessor(model_name, processor, expected_args, card_fields)
+            ModelProcessor(processor, expected_args, card_fields)
         )
 
     def card_processor(
@@ -349,6 +349,9 @@ class Hanky:
                 else:
                     skipped += 1
             except Exception as e:
+                # inject model info into exception which processor doesn't know
+                if isinstance(e, CardProcessingException):
+                    e.model = model_name
                 if fail_fast:
                     raise
                 errors.append(CardError(card=item, error=str(e)))
