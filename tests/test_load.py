@@ -2,6 +2,35 @@ from types import MappingProxyType
 
 import pytest
 
+from hanky.processors import CardProcessingException
+
+
+def test_load_cards_stamps_the_model_onto_a_processor_error(app):
+    def boom(card):
+        raise RuntimeError("api down")
+
+    app.register_card_processor("Basic", boom)
+
+    with pytest.raises(CardProcessingException) as exc_info:
+        app.load_cards(
+            [{"Front": "chien", "Back": "dog"}], "Basic", "French", fail_fast=True
+        )
+
+    assert exc_info.value.model == "Basic"
+    assert "Basic" in str(exc_info.value)
+
+
+def test_load_cards_reports_a_processor_error_with_the_model(app):
+    def boom(card):
+        raise RuntimeError("api down")
+
+    app.register_card_processor("Basic", boom)
+
+    report = app.load_cards([{"Front": "chien", "Back": "dog"}], "Basic", "French")
+
+    assert report.failed == 1
+    assert "Basic" in report.errors[0].error
+
 
 def test_load_cards_adds_every_card_from_the_source(app):
     source = [

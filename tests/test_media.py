@@ -77,7 +77,7 @@ def test_dict_return_yields_empty_media_list():
         card["Back"] = "added"
         return card
 
-    p = ModelProcessor("Basic", proc, [], [])
+    p = ModelProcessor(proc, [], [])
     card, media = p({"Front": "x"})
 
     assert card == {"Front": "x", "Back": "added"}
@@ -91,7 +91,7 @@ def test_single_cardmedia_return_is_wrapped_in_a_list():
         card["Back"] = m.media_ref
         return card, [m]
 
-    p = ModelProcessor("Basic", proc, [], [])
+    p = ModelProcessor(proc, [], [])
     card, media = p({"Front": "x"})
 
     assert media == [m]
@@ -104,7 +104,7 @@ def test_media_list_return_is_passed_through():
     def proc(card):
         return card, [m1, m2]
 
-    card, media = ModelProcessor("Basic", proc, [], [])({"Front": "x"})
+    card, media = ModelProcessor(proc, [], [])({"Front": "x"})
 
     assert media == [m1, m2]
 
@@ -113,6 +113,6 @@ def test_empty_media_list_return_is_passed_through():
     def proc(card):
         return card, []
 
-    card, media = ModelProcessor("Basic", proc, [], [])({"Front": "x"})
+    card, media = ModelProcessor(proc, [], [])({"Front": "x"})
 
     assert media == []
