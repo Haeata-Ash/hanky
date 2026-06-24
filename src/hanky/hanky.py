@@ -16,7 +16,7 @@ from anki.collection import Collection
 from hanky.processors import ModelProcessor
 from hanky.cli import make_parser
 from hanky.config import Config
-from hanky.fs import DEFAULT_LOADERS, Loader, has_handle
+from hanky.fs import DEFAULT_LOADERS, Loader, has_handle, make_file_loader
 from hanky.media import CardMedia
 
 from anki.notes import NoteFieldsCheckResult
@@ -56,8 +56,10 @@ class Hanky:
 
         self.processors: Dict[str, List[ModelProcessor]] = dict()
         self.loaders: Dict[str, Callable[[str], Iterator[dict]]] = dict()
-        for k, v in DEFAULT_LOADERS.items():
-            self.register_loader(k, v)
+        for ext, spec in DEFAULT_LOADERS.items():
+            self.register_loader(
+                ext, spec.loader, is_text=spec.is_text, **spec.fopen_kwargs
+            )
 
     @property
     def config(self):
@@ -187,20 +189,9 @@ class Hanky:
         Returns:
             None
         """
-
-        # wraps the loader in a generator function
-        # if the file is not found we handle and print to the user
-        # validates that the loader returns dictionaries when iterated on
-        def loader_wrapper(fpath: str) -> Iterator[dict]:
-            with open(fpath, "r" if is_text else "rb", **fopen_kwargs) as f:
-                for item in loader(f):
-                    if not isinstance(item, dict):
-                        raise ValueError(
-                            f"Item returned by loader for file extension '{file_ext}' did not return a dictionary."
-                        )
-                    yield item
-
-        self.loaders[file_ext] = loader_wrapper
+        # extensions are matched case-insensitively
+        file_ext = file_ext.lower()
+        self.loaders[file_ext] = make_file_loader(loader, is_text, **fopen_kwargs)
 
     def register_card_processor(
         self,
@@ -281,6 +272,14 @@ class Hanky:
 
     def get_loader(self, suffix) -> Callable:
         """Get the loader function for a particular file extension"""
+        suffix = suffix.lower()
+        if suffix not in self.loaders:
+            supported = ", ".join(sorted(self.loaders)) or "none"
+            raise ValueError(
+                f"No loader is registered for the file extension '{suffix}'. "
+                f"Supported extensions: {supported}. Register a loader for "
+                f"this extension with register_loader()."
+            )
         return self.loaders[suffix]
 
     def load_cards(
