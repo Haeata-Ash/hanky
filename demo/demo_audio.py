@@ -1,5 +1,5 @@
 from typing import IO
-from hanky import Hanky
+from hanky import Hanky, CardMedia
 import boto3
 import pandas
 
@@ -75,15 +75,14 @@ def lang_model(card: dict, lang):
     elif lang.upper() == "GERMAN":
         speech = generate_neural_speech(card["target-lang"], GERMAN)
     else:
-        raise Exception("Unkown language.")
-
-    # add the mp3 data as a media file so it is synced by anki
-    speech_ref = hanky.add_media(speech, file_ext=".mp3")
+        raise Exception("Unknown language.")
 
     # put the reference to that media inside a field in the lang-vocab model
     # in this case there is a specific field, 'target-lang-speech'
-    card["target-lang-speech"] = speech_ref
-    return card
+    speech_media = CardMedia(speech, ".mp3")
+
+    card["target-lang-speech"] = speech_media.media_ref
+    return card, speech_media
 
 
 # run the hanky cml application by running this python file

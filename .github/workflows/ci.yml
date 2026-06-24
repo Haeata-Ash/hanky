@@ -1,0 +1,65 @@
+name: CI
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+
+# Cancel superseded runs on the same ref to save CI minutes.
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+      - name: Install dependencies
+        run: uv sync --python 3.12
+      - name: ruff check
+        run: uv run ruff check .
+      - name: ruff format --check
+        run: uv run ruff format --check .
+
+  typecheck:
+    name: Type check (mypy)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+      - name: Install dependencies
+        run: uv sync --python 3.12
+      - name: mypy
+        run: uv run mypy src/hanky
+
+  test:
+    name: Test (Python ${{ matrix.python-version }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.11", "3.12", "3.13"]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+      - name: Install dependencies
+        # --extra tos pulls boto3 so the TOS-dependent tests run, matching
+        # the old hatch-test environment.
+        run: uv sync --python ${{ matrix.python-version }} --extra tos
+      - name: Run tests
+        run: uv run --python ${{ matrix.python-version }} pytest

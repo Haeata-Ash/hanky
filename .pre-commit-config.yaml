@@ -3,11 +3,11 @@ repos:
     # Ruff version.
     rev: v0.4.6
     hooks:
+      # Run the formatter.
+      - id: ruff-format
       # Run the linter.
       - id: ruff
         args: [ --fix ]
-      # Run the formatter.
-      - id: ruff-format
   - repo: https://github.com/pre-commit/mirrors-mypy
     rev: 'v1.10.0'
     hooks:

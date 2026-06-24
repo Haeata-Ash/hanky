@@ -6,8 +6,7 @@ class KeyValueArg(argparse.Action):
         setattr(namespace, self.dest, dict())
 
         for v in values:
-            print(v)
-            key, value = v.split("=")
+            key, value = v.split("=", 1)
             getattr(namespace, self.dest)[key] = value
 
 
@@ -15,11 +14,6 @@ def make_parser(has_card_processors=False):
     parser = argparse.ArgumentParser(
         "hanky",
         description="Simple program to allow programatic management of anki cards",
-    )
-    parser.add_argument(
-        "--config",
-        dest="config",
-        help="Path to hanky toml configuration file",
     )
 
     op_parser = parser.add_subparsers(
@@ -37,6 +31,13 @@ def make_parser(has_card_processors=False):
         dest="deck",
         default=None,
         help="Name of the deck to load cards into. If not specified, defaults to the filename without the extension.",
+    )
+    load_file.add_argument(
+        "--fail-fast",
+        dest="fail_fast",
+        action="store_true",
+        default=False,
+        help="Stop and raise on the first card that cannot be added, instead of skipping it and reporting at the end.",
     )
     if has_card_processors:
         load_file.add_argument(
@@ -65,6 +66,13 @@ def make_parser(has_card_processors=False):
     load_dir.add_argument(
         "pattern",
         help="Glob pattern used to decide which files to load. For example, '*.csv'",
+    )
+    load_dir.add_argument(
+        "--fail-fast",
+        dest="fail_fast",
+        action="store_true",
+        default=False,
+        help="Stop and raise on the first card that cannot be added, instead of skipping it and reporting at the end.",
     )
 
     if has_card_processors:
