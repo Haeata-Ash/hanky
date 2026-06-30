@@ -409,7 +409,7 @@ uv run mypy src/hanky      # type check
 
 ## Publishing
 
-1. Bump `__version__` in `src/hanky/__about__.py`.
+1. Bump the version by either editing the *pyproject.toml* file or via `uv version --bump ...`.
 2. Build the distributions:
 
    ```sh
