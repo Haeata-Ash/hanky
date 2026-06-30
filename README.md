@@ -125,7 +125,7 @@ DO_SAFETY_CHECK = true
 # Allow cards whose fields duplicate an existing card. Default: false.
 ALLOW_DUPLICATES = false
 
-# Where hanky writes a backup of the collection before modifying it.
+# Where hanky writes backups of the collection.
 # Default: ~/.local/share/hanky/backups
 BACKUP_FOLDER = "~/.local/share/hanky/backups"
 ```
