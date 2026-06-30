@@ -42,14 +42,14 @@ def test_load_cards_adds_every_card_from_the_source(app):
 
     assert report.added == 2
     assert report.total == 2
-    assert app.col.note_count() == 2
-    assert app.col.decks.id("French", create=False) is not None
+    assert app._open_collection().note_count() == 2
+    assert app._open_collection().decks.id("French", create=False) is not None
 
 
 def test_load_cards_creates_the_destination_deck(app):
     app.load_cards([{"Front": "un", "Back": "one"}], "Basic", "French::Numbers")
 
-    assert app.col.decks.id("French::Numbers", create=False) is not None
+    assert app._open_collection().decks.id("French::Numbers", create=False) is not None
 
 
 def test_load_cards_reports_a_dupe_as_skipped(app):
@@ -63,7 +63,7 @@ def test_load_cards_reports_a_dupe_as_skipped(app):
     assert report.added == 1
     assert report.skipped == 1
     assert report.failed == 0
-    assert app.col.note_count() == 1
+    assert app._open_collection().note_count() == 1
 
 
 def test_load_cards_accepts_a_non_dict_mapping(app):
@@ -72,7 +72,7 @@ def test_load_cards_accepts_a_non_dict_mapping(app):
     report = app.load_cards(source, "Basic", "French")
 
     assert report.added == 1
-    assert app.col.note_count() == 1
+    assert app._open_collection().note_count() == 1
 
 
 def test_load_cards_unknown_model_raises_keyerror(app):
@@ -100,7 +100,7 @@ def test_load_cards_unknown_model_does_not_create_a_deck(app):
     with pytest.raises(KeyError):
         app.load_cards([{"Front": "a", "Back": "b"}], "NoSuchModel", "French")
 
-    assert app.col.decks.id("French", create=False) is None
+    assert app._open_collection().decks.id("French", create=False) is None
 
 
 @pytest.mark.parametrize("bad_item", ["not a dict", 42, ["Front", "x"], None])
@@ -125,7 +125,7 @@ def test_load_cards_continues_past_a_non_mapping_item(app):
     # both valid cards are added; only the bad item is recorded as an error
     assert report.added == 2
     assert report.failed == 1
-    assert app.col.note_count() == 2
+    assert app._open_collection().note_count() == 2
 
 
 def test_load_cards_fail_fast_raises_and_stops_at_the_first_bad_item(app):
@@ -139,7 +139,7 @@ def test_load_cards_fail_fast_raises_and_stops_at_the_first_bad_item(app):
         app.load_cards(source, "Basic", "French", fail_fast=True)
 
     # the valid card before the bad item was still added; the one after was not
-    assert app.col.note_count() == 1
+    assert app._open_collection().note_count() == 1
 
 
 def test_load_cards_collects_a_card_with_a_missing_field_as_an_error(app):
@@ -152,7 +152,7 @@ def test_load_cards_collects_a_card_with_a_missing_field_as_an_error(app):
 
     assert report.added == 1
     assert report.failed == 1
-    assert app.col.note_count() == 1
+    assert app._open_collection().note_count() == 1
 
 
 def test_load_cards_accepts_a_generator_source(app):
@@ -163,7 +163,7 @@ def test_load_cards_accepts_a_generator_source(app):
     report = app.load_cards(gen(), "Basic", "French")
 
     assert report.added == 2
-    assert app.col.note_count() == 2
+    assert app._open_collection().note_count() == 2
 
 
 def test_load_cards_empty_source_adds_nothing_but_creates_the_deck(app):
@@ -171,5 +171,5 @@ def test_load_cards_empty_source_adds_nothing_but_creates_the_deck(app):
 
     assert report.added == 0
     assert report.total == 0
-    assert app.col.note_count() == 0
-    assert app.col.decks.id("French", create=False) is not None
+    assert app._open_collection().note_count() == 0
+    assert app._open_collection().decks.id("French", create=False) is not None

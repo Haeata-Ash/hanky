@@ -4,56 +4,64 @@ from hanky.hanky import Hanky
 
 
 def test_add_deck_creates_deck(app):
-    app.add_deck("French")
+    col = app._open_collection()
+    app.add_deck(col, "French")
 
-    assert app.col.decks.id("French", create=False) is not None
+    assert col.decks.id("French", create=False) is not None
 
 
 def test_add_card_adds_a_note(app):
-    app.add_deck("French")
+    col = app._open_collection()
+    app.add_deck(col, "French")
 
-    added = app.add_card("French", "Basic", Front="bonjour", Back="hello")
+    added = app.add_card(col, "French", "Basic", Front="bonjour", Back="hello")
 
     assert added is True
-    assert app.col.note_count() == 1
+    assert col.note_count() == 1
 
 
 def test_add_card_strips_whitespace_from_fields(app):
-    app.add_deck("French")
-    app.add_card("French", "Basic", Front="  bonjour  ", Back="hello")
+    col = app._open_collection()
+    app.add_deck(col, "French")
+    app.add_card(col, "French", "Basic", Front="  bonjour  ", Back="hello")
 
-    note = app.col.get_note(app.col.find_notes("")[0])
+    note = col.get_note(col.find_notes("")[0])
 
     assert note["Front"] == "bonjour"
 
 
 def test_add_card_rejects_duplicate(app):
-    app.add_deck("French")
-    app.add_card("French", "Basic", Front="bonjour", Back="hello")
+    col = app._open_collection()
+    app.add_deck(col, "French")
+    app.add_card(col, "French", "Basic", Front="bonjour", Back="hello")
 
-    added_again = app.add_card("French", "Basic", Front="bonjour", Back="hello")
+    added_again = app.add_card(col, "French", "Basic", Front="bonjour", Back="hello")
 
     assert added_again is False
-    assert app.col.note_count() == 1
+    assert col.note_count() == 1
 
 
 def test_add_card_unknown_model_raises(app):
-    app.add_deck("French")
+    col = app._open_collection()
+    app.add_deck(col, "French")
 
     with pytest.raises(ValueError):
-        app.add_card("French", "NoSuchModel", Front="a", Back="b")
+        app.add_card(col, "French", "NoSuchModel", Front="a", Back="b")
 
 
 def test_add_card_unknown_deck_raises(app):
+    col = app._open_collection()
+
     with pytest.raises(ValueError):
-        app.add_card("NoSuchDeck", "Basic", Front="a", Back="b")
+        app.add_card(col, "NoSuchDeck", "Basic", Front="a", Back="b")
 
 
 def test_add_card_missing_field_raises(app):
-    app.add_deck("French")
+    col = app._open_collection()
+    app.add_deck(col, "French")
 
     with pytest.raises(KeyError):
-        app.add_card("French", "Basic", Front="only the front")
+        app.add_card(col, "French", "Basic", Front="only the front")
 
 
 def test_col_raises_when_db_path_missing(tmp_path):
@@ -61,4 +69,4 @@ def test_col_raises_when_db_path_missing(tmp_path):
     app = Hanky(Config(ANKI_DB_PATH=str(missing), DO_SAFETY_CHECK=False))
 
     with pytest.raises(FileNotFoundError):
-        _ = app.col
+        _ = app._open_collection()

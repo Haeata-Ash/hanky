@@ -37,7 +37,7 @@ def test_load_deck_reads_a_single_object_json_file(app, tmp_path):
     report = app.load_deck(str(fpath), "Basic")
 
     assert report.added == 1
-    assert app.col.note_count() == 1
+    assert app._open_collection().note_count() == 1
 
 
 def test_get_loader_unknown_extension_raises_helpful_value_error(app):
@@ -62,4 +62,4 @@ def test_load_deck_reads_an_uppercase_extension(app, tmp_path):
     report = app.load_deck(str(fpath), "Basic")
 
     assert report.added == 1
-    assert app.col.note_count() == 1
+    assert app._open_collection().note_count() == 1
