@@ -28,7 +28,8 @@ def fake_default_backup_folder(tmp_path, monkeypatch):
 @pytest.fixture(autouse=True)
 def app(tmp_path, fake_default_config, fake_default_backup_folder):
     db_path = tmp_path / "collection.anki2"
-    # close new collection so Hanky can open it itself through the `col` property.
+
+    # create new collection, then close so it can be opened in test
     Collection(str(db_path)).close()
 
     app = Hanky(
@@ -38,7 +39,6 @@ def app(tmp_path, fake_default_config, fake_default_backup_folder):
             BACKUP_FOLDER=str(tmp_path / "backups"),
         )
     )
+    _ = app._open_collection()
     yield app
-
-    if app._col:
-        app.col.close()
+    app._close_collection()

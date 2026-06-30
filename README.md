@@ -125,7 +125,7 @@ DO_SAFETY_CHECK = true
 # Allow cards whose fields duplicate an existing card. Default: false.
 ALLOW_DUPLICATES = false
 
-# Where hanky writes a backup of the collection before modifying it.
+# Where hanky writes backups of the collection.
 # Default: ~/.local/share/hanky/backups
 BACKUP_FOLDER = "~/.local/share/hanky/backups"
 ```
@@ -409,7 +409,7 @@ uv run mypy src/hanky      # type check
 
 ## Publishing
 
-1. Bump `__version__` in `src/hanky/__about__.py`.
+1. Bump the version by either editing the *pyproject.toml* file or via `uv version --bump ...`.
 2. Build the distributions:
 
    ```sh
