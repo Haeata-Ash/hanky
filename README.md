@@ -396,6 +396,10 @@ french/                        decks created
 CSV (`.csv`) and JSON (`.json`) files work with no setup. The column/key names in
 your file must match the field names of the Anki model you target.
 
+## Contributing
+
+Pull requests are welcome. For major changes, open an issue first to discuss what
+you'd like to change. Please make sure tests pass (`uv run pytest`) before submitting.
 
 ## Development
 
@@ -407,7 +411,7 @@ uv run ruff check .        # lint
 uv run mypy src/hanky      # type check
 ```
 
-## Publishing
+## Publishing (For Me)
 
 1. Bump the version by either editing the *pyproject.toml* file or via `uv version --bump ...`.
 2. Build the distributions:
