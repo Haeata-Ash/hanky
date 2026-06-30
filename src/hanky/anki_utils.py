@@ -12,6 +12,7 @@ def add_media(
     """Add binary data to the anki collection.
 
     Args:
+        col: The anki collection to add the media to
         data: the binary media data
         media_fname: The filename including the extension
 
@@ -30,7 +31,12 @@ def add_media(
 
 
 def backup_collection(col: Collection, backup_folder: str):
-    """Backups the anki collection to a folder"""
+    """Backups the anki collection to a folder
+
+    Args:
+        col: The anki collection to backup
+        backup_folder: the directory/folder to store the backup in
+    """
     folder_path = Path(backup_folder)
     folder_path.mkdir(parents=True, exist_ok=True)
     if not col.create_backup(
@@ -51,6 +57,7 @@ def add_card(
     """Adds a card of a given model type to a deck.
 
     Args:
+        col: The anki collection to add the card to
         deck_name: the full destination deck name as a seen in anki.
         model_name: the name of the flash card model as seen in anki.
 
@@ -96,6 +103,7 @@ def add_deck(col: Collection, deck_name: str):
     """Adds a deck to anki. If the deck already exists nothing will happen
 
     Args:
+        col: The anki collection to add the deck to
         deck_name: the full name of the deck to be added
     """
     col.decks.id(deck_name)
