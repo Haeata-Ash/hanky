@@ -1,3 +1,4 @@
+from contextlib import contextmanager
 from pathlib import Path
 from typing import (
     Any,
@@ -51,9 +52,7 @@ class Hanky:
         """
         self._config = config
 
-        # TODO: figure out a way to narrow this type so we don't have to ignore
-        # It should never be none anyway after run is called
-        self._col: Collection = None  # type: ignore
+        self._col: Optional[Collection] = None
 
         self.processors: Dict[str, List[ModelProcessor]] = dict()
         self.loaders: Dict[str, Callable[[str], Iterator[dict]]] = dict()
@@ -81,10 +80,15 @@ class Hanky:
 
         return self._config
 
-    @property
-    def col(self) -> Collection:
-        """Anki collection. Access will raise an error if another processes is
-        using the anki database"""
+    def _open_collection(self) -> Collection:
+        """Open the anki collection object if its not already open.
+
+        **The collection must be closed** with :meth:`_close_collection`, since
+        it opens an sqlite db conn under the hood
+
+        First access will raise an error if another processes has a handle for the
+        collection AND the hanky process has the neccessary permissions to see the handle.
+        """
         if not self._col:
             db_path = Path(self.config.ANKI_DB_PATH).expanduser().absolute()
 
@@ -96,19 +100,50 @@ class Hanky:
             if self.config.DO_SAFETY_CHECK:
                 if has_handle(self.config.ANKI_DB_PATH):
                     raise RuntimeError(
-                        """At least one other process is using the anki database. Ensure the Anki application is closed before using Hanky to avoid possible database corruption."""
+                        """At least one other process is using the anki database. 
+                        Ensure the Anki application is closed before using Hanky to 
+                        avoid possible database corruption."""
                     )
 
             self._col = Collection(str(db_path))
-            self.backup_collection(self.config.BACKUP_FOLDER)
 
         return self._col
 
-    def backup_collection(self, backup_folder: str):
+    def _close_collection(self):
+        """Close the anki collection and its underlying sqlite conn."""
+        if self._col is not None:
+            self._col.close()
+        # drop the reference so a closed collection is never handed back out
+        # and a later session can re-open cleanly
+        self._col = None
+
+    @contextmanager
+    def session(self) -> Iterator[Collection]:
+        """Opens the anki collection if it isn't already open, and closes it on exit
+        including when the body raises. Any exception from the body propagates unchanged.
+
+        Only the scope that opened the collection closes it, so sessions may
+        be nested safely.
+
+        Yields:
+            The open anki :class:`~anki.collection.Collection`.
+        """
+        # duplicated boolean because mypy wasn't
+        # seeing was_opened_here
+        was_opened_here = self._col is None
+        if self._col is None:
+            self._col = self._open_collection()
+        try:
+            yield self._col
+        finally:
+            if was_opened_here:
+                self._close_collection()
+
+    def backup_collection(self, col: Collection, backup_folder: str):
         """Backups the anki collection to the configured backup"""
         folder_path = Path(backup_folder)
         folder_path.mkdir(parents=True, exist_ok=True)
-        if not self._col.create_backup(
+        if not col.create_backup(
             backup_folder=backup_folder,
             force=True,
             wait_for_completion=True,
@@ -117,6 +152,7 @@ class Hanky:
 
     def add_card(
         self,
+        col: Collection,
         deck_name: str,
         model_name: str,
         **fields,
@@ -134,23 +170,23 @@ class Hanky:
             ValueError: The deck or model don't exist
             KeyError: The card does not have the required fields for the model
         """
-        model = self.col.models.by_name(model_name)
+        model = col.models.by_name(model_name)
         if model is None:
             raise ValueError(
                 f"Model '{model_name}' does not exist in your anki collection. Ensure it has been added before using it with hanky."
             )
-        deck_id = self.col.decks.id(deck_name, create=False)
+        deck_id = col.decks.id(deck_name, create=False)
         if deck_id is None:
             raise ValueError(
                 f"Deck '{deck_name}' does not exist in your anki collection. Ensure it has been created before using it with hanky."
             )
 
-        expected_fields = self.col.models.field_names(model)
+        expected_fields = col.models.field_names(model)
         for k in expected_fields:
             if k not in fields:
                 raise KeyError(f"Expected field '{k}' is missing. {fields}")
 
-        new_card = self.col.new_note(model)
+        new_card = col.new_note(model)
 
         for k, v in fields.items():
             new_card[k] = str(v).strip()
@@ -161,17 +197,16 @@ class Hanky:
             if card_state == NoteFieldsCheckResult.DUPLICATE:
                 return False
 
-        self.col.add_note(new_card, deck_id)
-
+        col.add_note(new_card, deck_id)
         return True
 
-    def add_deck(self, deck_name: str):
+    def add_deck(self, col: Collection, deck_name: str):
         """Adds a deck to anki. If the deck already exists nothing will happen
 
         Args:
             deck_name: the full name of the deck to be added
         """
-        self.col.decks.id(deck_name)
+        col.decks.id(deck_name)
 
     def register_loader(
         self, file_ext: str, loader: Loader, is_text=True, **fopen_kwargs
@@ -314,49 +349,50 @@ class Hanky:
         """
         transformers = self.get_model_processors(model_name)
 
-        model = self.col.models.by_name(model_name)
-        if not model:
-            raise KeyError(
-                f"Model '{model_name}' does not exist in your anki collection. Ensure it has been added before using it with hanky."
-            )
+        with self.session() as col:
+            model = col.models.by_name(model_name)
+            if not model:
+                raise KeyError(
+                    f"Model '{model_name}' does not exist in your anki collection. Ensure it has been added before using it with hanky."
+                )
 
-        self.add_deck(deck_name)
+            self.add_deck(col, deck_name)
 
-        added = 0
-        skipped = 0
-        errors: List[CardError] = []
-        for item in source:
-            try:
-                if not isinstance(item, Mapping):
-                    raise ValueError(
-                        f"Card source for model '{model_name}' yielded a "
-                        f"{type(item).__name__}, expected a dictionary (mapping)."
-                    )
-                card = dict(item)
-                media: List[CardMedia] = []
-                for t in transformers:
-                    card, new_media = t(card, **model_args)
-                    media += new_media
+            added = 0
+            skipped = 0
+            errors: List[CardError] = []
+            for item in source:
+                try:
+                    if not isinstance(item, Mapping):
+                        raise ValueError(
+                            f"Card source for model '{model_name}' yielded a "
+                            f"{type(item).__name__}, expected a dictionary (mapping)."
+                        )
+                    card = dict(item)
+                    media: List[CardMedia] = []
+                    for t in transformers:
+                        card, new_media = t(card, **model_args)
+                        media += new_media
 
-                # TODO: we are leaving the media in the db even if the card
-                # isn't added
-                for m in media:
-                    actual_fname = self.add_media(m.data, m.desired_name)
-                    m.replace_temp_refs(actual_fname, card)
+                    # TODO: we are leaving the media in the db even if the card
+                    # isn't added
+                    for m in media:
+                        actual_fname = self.add_media(col, m.data, m.desired_name)
+                        m.replace_temp_refs(actual_fname, card)
 
-                if self.add_card(deck_name, model_name, **card):
-                    added += 1
-                else:
-                    skipped += 1
-            except Exception as e:
-                # inject model info into exception which processor doesn't know
-                if isinstance(e, CardProcessingException):
-                    e.model = model_name
-                if fail_fast:
-                    raise
-                errors.append(CardError(card=item, error=str(e)))
+                    if self.add_card(col, deck_name, model_name, **card):
+                        added += 1
+                    else:
+                        skipped += 1
+                except Exception as e:
+                    # inject model info into exception which processor doesn't know
+                    if isinstance(e, CardProcessingException):
+                        e.model = model_name
+                    if fail_fast:
+                        raise
+                    errors.append(CardError(card=item, error=str(e)))
 
-        return LoadReport(added=added, skipped=skipped, errors=errors)
+            return LoadReport(added=added, skipped=skipped, errors=errors)
 
     def load_deck(
         self,
@@ -396,6 +432,7 @@ class Hanky:
 
     def add_media(
         self,
+        col: Collection,
         data: Any,
         media_fname: str,
     ) -> str:
@@ -411,7 +448,7 @@ class Hanky:
         desired_name = media_fname
 
         # write media to anki database
-        actual_name = self.col.media.write_data(
+        actual_name = col.media.write_data(
             desired_name,
             data,
         )
@@ -471,37 +508,45 @@ class Hanky:
                     yield path
 
         report = LoadReport()
-        for path in _glob(root, glob_pattern, recursive):
-            if path.is_file():
-                path = path.relative_to(root)
-                abs_path = root.joinpath(path)
-                parents = [p.name for p in reversed(path.parents)]
 
-                # don't need the first empty entry for the current directory
-                parents.pop(0)
-                deck_list = [root_deck]
+        # open collection session once, nested calls in load_deck
+        # will reuse the session
+        with self.session() as _:
+            for path in _glob(root, glob_pattern, recursive):
+                if path.is_file():
+                    path = path.relative_to(root)
+                    abs_path = root.joinpath(path)
+                    parents = [p.name for p in reversed(path.parents)]
 
-                i = 0
-                while i < len(parents):
-                    deck_list.append(parents[i])
-                    i += 1
-                deck_list.append(path.stem)
-                full_deck = "::".join(deck_list)
+                    # don't need the first empty entry for the current directory
+                    parents.pop(0)
+                    deck_list = [root_deck]
 
-                report += self.load_deck(
-                    str(abs_path),
-                    model,
-                    deck_name=full_deck,
-                    fail_fast=fail_fast,
-                    **model_args,
-                )
+                    i = 0
+                    while i < len(parents):
+                        deck_list.append(parents[i])
+                        i += 1
+                    deck_list.append(path.stem)
+                    full_deck = "::".join(deck_list)
+
+                    report += self.load_deck(
+                        str(abs_path),
+                        model,
+                        deck_name=full_deck,
+                        fail_fast=fail_fast,
+                        **model_args,
+                    )
 
         return report
 
     def run(self) -> None:
-        """Run the Hanky object as a CLI application. Useful for people extending the
-        hanky app or making use of processors or loaders.
+        """Run the Hanky object as a CLI application. This method
+        performs a backup of the current anki collection.
+
         """
+        with self.session() as col:
+            self.backup_collection(col, self.config.BACKUP_FOLDER)
+
         _run_app(self)
 
 
