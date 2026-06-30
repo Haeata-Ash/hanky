@@ -10,7 +10,7 @@ For example, a single hanky pipeline might take an English word and:
 1. scrape a French translation and example sentence from a dictionary site, then
 2. generate spoken audio of that translation with a text-to-speech service,
 
-turning a one-column spreadsheet into rich, audio-enabled cards.
+turning a list of words into rich flash cards with native speech and examples.
 
 *Hanky is not affiliated or associated with the [Anki application/org](https://apps.ankiweb.net/).*
 
@@ -38,9 +38,9 @@ pip install hanky
 
 ## Quickstart
 
-The idea is simple. You extend hanky in your own python script `my_script.py` by writing functions called **card processors**. These functions contain the logic to transform cards. Hanky then handles the cli interface, calling your processors, and finally adding the cards to anki.
+You extend hanky in your own python script `my_script.py` by writing functions called **card processors**. These functions contain the logic to transform cards. Hanky then handles the cli interface, calling your processors, and finally adding the cards to anki.
 
-To illustrate what this looks like in practice, we will create a simple hanky script which ensures all the text on a card is lower case.
+To illustrate what this looks like, we will create a simple hanky script which ensures all the text on a card is lower case.
 
 
 See [Card Processors & Pipelines](#card-processors--pipelines) or the [demo folder](/demo/) for more complex, real world examples.
@@ -85,7 +85,7 @@ We would run our new script like so
 python3 my_script.py load basic words.csv --deck english::vocab
 ```
 
-Here we tell hanky to **load** each line of the **words.csv**, transform each line of the csv with the *lowercase_card* card processor, before finally adding each card, of type **basic**, into the anki deck **english::vocab**.
+Here we tell hanky to **load** each line of the `words.csv`, **transform** each line of the csv with the `lowercase_card` card processor, before finally adding each card, of note type `basic`, into the anki deck `english::vocab`.
 
 This would leave us with a **english::vocab** deck containing the following cards:
 
@@ -173,7 +173,7 @@ def my_processor(card: dict, lang):
     ...
 ```
 
-Your processor could be called like:
+Hanky would then call your processor like so:
 
 ```python
 my_processor(card, lang="german")
@@ -203,15 +203,15 @@ This example below builds flash cards for learning french vocabulary as an engli
 | ... |
 | goodbye |
 
-We want to creates flash cards with the french translation/definition, an example sentence (in both french and english), and french speech audio for the example sentence.
+We want to create flash cards with the french translation/definition, an example sentence (in both french and english), and french speech audio for the example sentence.
 
 The two processors in our pipeline will be:
 
 1. `scrape_translation`: takes an english `word` and scrapes a website to produce a `translation` and an `example`.
-2. `add_audio` — takes the `translation` and `example` produced in step 1 then produces French
+2. `add_audio`: takes the `translation` and `example` from step 1 then produces French
    audio.
 
-Note that for brevity the `scrape_wordreference` and `generate_neural_speech` functions are not included. See the [full demo file](/demo/demo_scrape.py) for the complete code.
+Note that for brevity the `scrape_wordreference` and `generate_neural_speech` functions are not included. See the [full demo file](https://github.com/Haeata-Ash/hanky/blob/main/demo/demo_scrape.py) for the complete code.
 
 ```python
 from hanky import CardMedia, Hanky
@@ -269,8 +269,7 @@ Supported media is currently only audio: `.mp3`, `.oga`, `.opus`, `.wav`, `.weba
 ## Custom file loaders
 
 To load formats beyond CSV/JSON, register a loader against a file extension. A
-loader takes an open file object and yields one `dict` per card. Once registered,
-that extension works everywhere — `load`, `load-dir`, and through your pipelines.
+loader takes an open file object and yields one `dict` per card.
 
 ```python
 import pandas
@@ -323,24 +322,24 @@ print(f"Added {report.added}, skipped {report.skipped}, failed {report.failed}."
 
 ## Examples
 
-Complete, runnable scripts live in the [`demo/`](demo/) directory, ordered here
+Complete, runnable scripts live in the [`demo/`](https://github.com/Haeata-Ash/hanky/tree/main/demo) directory, ordered here
 from simplest to most involved. Install their dependencies with
 `pip install -r demo/requirements.txt`.
 
-- [`demo_lowercase.py`](demo/demo_lowercase.py) — The minimal example: a single,
+- [`demo_lowercase.py`](https://github.com/Haeata-Ash/hanky/blob/main/demo/demo_lowercase.py) — The minimal example: a single,
   dependency-free processor that lower-cases every field on a card.
-- [`demo_random_words.py`](demo/demo_random_words.py) — A non-file source: builds
+- [`demo_random_words.py`](https://github.com/Haeata-Ash/hanky/blob/main/demo/demo_random_words.py) — A non-file source: builds
   cards from an in-script word list and adds them with `load_cards`.
-- [`demo_define.py`](demo/demo_define.py) — A single processor that fills the
+- [`demo_define.py`](https://github.com/Haeata-Ash/hanky/blob/main/demo/demo_define.py) — A single processor that fills the
   back of each card with a dictionary definition of the word on its front,
   looked up offline via WordNet (NLTK).
-- [`demo_audio.py`](demo/demo_audio.py) — Registers a custom `.xlsx` loader and uses AWS
+- [`demo_audio.py`](https://github.com/Haeata-Ash/hanky/blob/main/demo/demo_audio.py) — Registers a custom `.xlsx` loader and uses AWS
   Polly to attach text-to-speech audio, choosing the language from a CLI
   argument (`--args lang=french`).
-- [`demo_scrape.py`](demo/demo_scrape.py) — A two-stage English→French pipeline
+- [`demo_scrape.py`](https://github.com/Haeata-Ash/hanky/blob/main/demo/demo_scrape.py) — A two-stage English→French pipeline
   that scrapes a translation and example sentence from WordReference, then
   voices the translation with AWS Polly.
-- [`demo_example_sentences.py`](demo/demo_example_sentences.py) — A three-stage
+- [`demo_example_sentences.py`](https://github.com/Haeata-Ash/hanky/blob/main/demo/demo_example_sentences.py) — A three-stage
   English→French pipeline that scrapes a translation from WordReference, asks
   Claude for an example sentence at a given CEFR level, then adds French audio
   for both the word and the sentence with AWS Polly.
