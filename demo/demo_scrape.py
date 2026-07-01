@@ -7,7 +7,7 @@ import pandas
 import requests
 from bs4 import BeautifulSoup
 
-from hanky import CardMedia, Hanky
+from hanky import CardMedia, HankyPipeline
 
 """Example hanky script which builds English to French flash cards by *composing*
 two card processors:
@@ -101,7 +101,7 @@ def generate_neural_speech(utf_8_str: str, voice: str) -> bytes:
 
 
 # instantiate the hanky app
-hanky = Hanky()
+hanky = HankyPipeline()
 
 
 def excel_loader(f_obj: IO):

@@ -1,5 +1,5 @@
 from typing import IO
-from hanky import Hanky, CardMedia
+from hanky import HankyPipeline, CardMedia
 import boto3
 import pandas
 
@@ -30,7 +30,7 @@ def generate_neural_speech(
 
 
 # instantiate the hanky app
-hanky = Hanky()
+hanky = HankyPipeline()
 
 
 # define our own excel card loader using the pandas library

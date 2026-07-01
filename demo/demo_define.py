@@ -3,7 +3,7 @@
 import nltk
 from nltk.corpus import wordnet
 
-from hanky import Hanky
+from hanky import HankyPipeline
 
 
 # WordNet ships as NLTK data rather than with the library itself, so make sure
@@ -45,7 +45,7 @@ def define(word: str) -> str:
 
 
 # instantiate the hanky app
-hanky = Hanky()
+hanky = HankyPipeline()
 
 
 @hanky.card_processor("basic", expected_args=[], card_fields=["Front"])
