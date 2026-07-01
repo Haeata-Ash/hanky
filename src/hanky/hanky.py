@@ -16,7 +16,7 @@ from anki.collection import Collection
 
 from hanky.anki_utils import add_card, add_deck, add_media, backup_collection
 from hanky.processors import CardProcessingException, ModelProcessor
-from hanky.cli import make_parser
+from hanky.cli import DEPRECATED_OPERATIONS, _warn_deprecated_operation, make_parser
 from hanky.config import Config
 from hanky.fs import DEFAULT_LOADERS, Loader, has_handle, make_file_loader
 from hanky.media import CardMedia
@@ -541,8 +541,11 @@ def _run_app(app: HankyPipeline, args: Optional[Sequence[str]] = None):
     except AttributeError:
         pass
 
+    if parsed_args.operation in DEPRECATED_OPERATIONS:
+        _warn_deprecated_operation(parsed_args.operation)
+
     report = LoadReport()
-    if parsed_args.operation == "load":
+    if parsed_args.operation in ("pipe", "load"):
         print(f"Loading into deck {parsed_args.deck} from file {parsed_args.file}")
         report = app.import_from_file(
             parsed_args.file,
@@ -552,7 +555,7 @@ def _run_app(app: HankyPipeline, args: Optional[Sequence[str]] = None):
             **model_args,
         )
 
-    elif parsed_args.operation == "load-dir":
+    elif parsed_args.operation in ("pipe-dir", "load-dir"):
         print(f"Loading from dirrectory {parsed_args.dir}")
         report = app.import_from_dir(
             parsed_args.model,
