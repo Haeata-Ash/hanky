@@ -9,12 +9,12 @@ def _write_csv(path: Path, rows):
     path.write_text("\n".join(lines) + "\n", newline="")
 
 
-def test_load_dir_builds_deck_names_from_the_directory_hierarchy(app, tmp_path):
+def test_import_from_dir_builds_deck_names_from_the_directory_hierarchy(app, tmp_path):
     root = tmp_path / "french"
     _write_csv(root / "animals.csv", [("chat", "cat")])
     _write_csv(root / "grammar" / "passe_compose.csv", [("mange", "ate")])
 
-    report = app.load_dir("Basic", str(root), "*.csv", recursive=True)
+    report = app.import_from_dir("Basic", str(root), "*.csv", recursive=True)
 
     col = app._open_collection()
     assert col.decks.id("french::animals", create=False) is not None
@@ -23,14 +23,16 @@ def test_load_dir_builds_deck_names_from_the_directory_hierarchy(app, tmp_path):
     assert col.note_count() == 2
 
 
-def test_load_dir_recursive_flag_and_glob_control_which_files_load(app, tmp_path):
+def test_import_from_dir_recursive_flag_and_glob_control_which_files_load(
+    app, tmp_path
+):
     root = tmp_path / "french"
     _write_csv(root / "top.csv", [("bonjour", "hello")])
     _write_csv(root / "sub" / "deep.csv", [("merci", "thanks")])
 
     (root / "notes.txt").write_text("not a card file\n")
 
-    shallow = app.load_dir("Basic", str(root), "*.csv", recursive=False)
+    shallow = app.import_from_dir("Basic", str(root), "*.csv", recursive=False)
 
     col = app._open_collection()
     assert shallow.added == 1
@@ -39,7 +41,7 @@ def test_load_dir_recursive_flag_and_glob_control_which_files_load(app, tmp_path
     assert col.note_count() == 1
 
     # the same call with recursive=True descends into the subdirectory
-    deep = app.load_dir("Basic", str(root), "*.csv", recursive=True)
+    deep = app.import_from_dir("Basic", str(root), "*.csv", recursive=True)
 
     assert deep.added == 1
     assert deep.skipped == 1

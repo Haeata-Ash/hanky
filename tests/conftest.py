@@ -1,6 +1,6 @@
 import pytest
 from anki.collection import Collection
-from hanky.hanky import Hanky
+from hanky.hanky import HankyPipeline
 from hanky.config import Config
 import hanky.hanky as hanky_module
 import hanky.config as config_module
@@ -32,7 +32,7 @@ def app(tmp_path, fake_default_config, fake_default_backup_folder):
     # create new collection, then close so it can be opened in test
     Collection(str(db_path)).close()
 
-    app = Hanky(
+    app = HankyPipeline(
         Config(
             ANKI_DB_PATH=str(db_path),
             DO_SAFETY_CHECK=False,

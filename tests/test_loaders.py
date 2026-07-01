@@ -30,11 +30,11 @@ def test_json_loader_rejects_other_top_level_shapes(top_level):
         list(json_loader(f))
 
 
-def test_load_deck_reads_a_single_object_json_file(app, tmp_path):
+def test_import_from_file_reads_a_single_object_json_file(app, tmp_path):
     fpath = tmp_path / "french.json"
     fpath.write_text(json.dumps({"Front": "bonjour", "Back": "hello"}))
 
-    report = app.load_deck(str(fpath), "Basic")
+    report = app.import_from_file(str(fpath), "Basic")
 
     assert report.added == 1
     assert app._open_collection().note_count() == 1
@@ -55,11 +55,11 @@ def test_register_loader_is_case_insensitive(app):
     assert app.get_loader(".xml") is not None
 
 
-def test_load_deck_reads_an_uppercase_extension(app, tmp_path):
+def test_import_from_file_reads_an_uppercase_extension(app, tmp_path):
     fpath = tmp_path / "FRENCH.CSV"
     fpath.write_text("Front,Back\nbonjour,hello\n")
 
-    report = app.load_deck(str(fpath), "Basic")
+    report = app.import_from_file(str(fpath), "Basic")
 
     assert report.added == 1
     assert app._open_collection().note_count() == 1

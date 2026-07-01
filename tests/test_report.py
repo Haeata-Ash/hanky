@@ -45,14 +45,14 @@ def test_with_source_stamps_only_errors_that_lack_one():
     assert stamped.errors[1].source == "other.csv"
 
 
-def test_load_deck_records_the_file_path_against_errors(app, tmp_path):
+def test_import_from_file_records_the_file_path_against_errors(app, tmp_path):
     fpath = tmp_path / "french.json"
     # second card is missing the required Back field
     fpath.write_text(
         json.dumps([{"Front": "bonjour", "Back": "hello"}, {"Front": "chat"}])
     )
 
-    report = app.load_deck(str(fpath), "Basic")
+    report = app.import_from_file(str(fpath), "Basic")
 
     assert report.added == 1
     assert report.failed == 1
