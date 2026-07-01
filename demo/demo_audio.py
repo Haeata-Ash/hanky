@@ -87,5 +87,5 @@ def lang_model(card: dict, lang):
 
 # run the hanky cml application by running this python file
 # For example, to load a deck of cards from file 'foods.xlsx'
-# python3 demo.py load lang-vocab foods.xlsx --args lang=french
+# python3 demo.py pipe foods.xlsx --model lang-vocab --args lang=french
 hanky.run()

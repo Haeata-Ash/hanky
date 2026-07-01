@@ -171,5 +171,5 @@ def add_audio(card: dict):
 
 
 # run the hanky cli application by running this python file, for example:
-#   python3 demo_example_sentences.py load lang-vocab words.csv --args level=B1
+#   python3 demo_example_sentences.py pipe words.csv --model lang-vocab --args level=B1
 hanky.run()

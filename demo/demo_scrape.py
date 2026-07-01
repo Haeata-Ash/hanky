@@ -18,7 +18,7 @@ two card processors:
      translation, attaching the audio as anki media.
 
 Run, e.g.:
-    python3 demo_scrape.py load lang-vocab words.xlsx
+    python3 demo_scrape.py pipe words.xlsx --model lang-vocab
 """
 
 
@@ -146,5 +146,5 @@ def add_audio(card: dict):
 
 
 # run the hanky cli application by running this python file, for example:
-#   python3 demo_scrape.py load lang-vocab words.xlsx
+#   python3 demo_scrape.py pipe words.xlsx --model lang-vocab
 hanky.run()
