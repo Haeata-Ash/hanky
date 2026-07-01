@@ -43,8 +43,7 @@ def make_file_loader(
     """Wrap a loader so it opens a file path and yields card data.
 
     The returned generator opens the file (in text or binary mode) and runs it
-    through ``loader``. The items it yields are validated as mappings later, by
-    Hanky.load_cards, so every card source is checked in one place.
+    through ``loader``.
 
     Args:
         loader: the callable which takes an open file object and yields

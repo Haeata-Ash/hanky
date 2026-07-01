@@ -45,7 +45,7 @@ class LoadReport:
         """Return a copy with ``source`` stamped onto any errors missing one.
 
         Lets a file based loader attribute in-memory errors to the file they
-        came from without the lower level load_cards needing to know paths.
+        came from without the lower level import_from_source needing to know paths.
         """
         return LoadReport(
             self.added,
