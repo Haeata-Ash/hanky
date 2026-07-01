@@ -2,10 +2,10 @@
 
 [![Hatch project](https://img.shields.io/badge/%F0%9F%A5%9A-Hatch-4051b5.svg)](https://github.com/pypa/hatch)
 
-Hanky is an extendable cli tool which loads flash cards from files, transforms them, then adds them to
+Hanky is an extendable cli tool which reads flash cards from files, transforms them, then adds them to
 Anki.
 
-For example, a single hanky pipeline might take an English word and:
+For example, a single hanky pipeline might take english words and:
 
 1. scrape a French translation and example sentence from a dictionary site, then
 2. generate spoken audio of that translation with a text-to-speech service,
@@ -61,7 +61,7 @@ def lowercase_card(card: dict):
 
 
 # run the hanky cli application by running this python file, for example:
-#   python3 my_script.py load basic words.csv -d english::vocab
+#   python3 my_script.py pipe words.csv --model basic --into english::vocab
 hanky.run()
 
 ```
@@ -82,10 +82,10 @@ Ephemeral,Lasting A VERY Short Time
 We would run our new script like so
 
 ```sh
-python3 my_script.py load basic words.csv --deck english::vocab
+python3 my_script.py pipe words.csv --model basic --into english::vocab
 ```
 
-Here we tell hanky to **load** each line of the `words.csv`, **transform** each line of the csv with the `lowercase_card` card processor, before finally adding each card, of note type `basic`, into the anki deck `english::vocab`.
+Here we tell hanky to **pipe** each word in `words.csv` through our `card_processors`, **transforming** each line of the csv with the `lowercase_card`, before finally adding each card, of note type `basic`, into the anki deck `english::vocab`.
 
 This would leave us with a **english::vocab** deck containing the following cards:
 
@@ -108,7 +108,7 @@ There are two ways to configure Hanky; via a configuration file or via a configu
 **You will only need configuration if you do not use the default Anki profile (`User 1`).**
 
 
-#### 1. Via TOML file at `~/.config/hanky/hanky.toml`** (loaded automatically if present):
+#### 1. Via TOML file at `~/.config/hanky/hanky.toml` (loaded automatically if present):
 
 ```toml
 # Path to the Anki collection (the sqlite db Anki stores cards in).
@@ -130,7 +130,7 @@ ALLOW_DUPLICATES = false
 BACKUP_FOLDER = "~/.local/share/hanky/backups"
 ```
 
-**2. A `Config` object passed to `HankyPipeline(...)`** in your script (takes precedence
+#### 2. A `Config` object passed to `HankyPipeline(...)` in your script (takes precedence
 over the file). Useful if you want different config for different scripts:
 
 ```python
@@ -161,8 +161,8 @@ def my_processor(card: dict, **expected_args):
 | Part | Meaning |
 | --- | --- |
 | `model` | The Anki model/note-type name. The processor runs on every card of this model. |
-| `card_fields` | Fields that **must already be present** on the card when this processor runs. Hanky checks this and raises a clear error if one is missing. It lets a processor declare what an *earlier* step must have produced. |
 | `expected_args` | Names of CLI arguments the processor needs. They are passed in from the command line via `--args key=value` and arrive as keyword arguments. For example, you might have the same pipeline for different languages, so you would pass in `lang=german` or `lang=french`|
+| `card_fields` | Fields that **must already be present** on the card when this processor runs. Hanky checks this and raises a clear error if one is missing. It lets a processor declare what an *earlier* step must have produced. |
 
 When hanky calls your processors, the first argument is always the `card`; a plain `dict` representing a a cards fields. Any declared `expected_args` are then passed in as key word arguments. So if you declared
 
@@ -243,7 +243,7 @@ def add_audio(card: dict):
 hanky.run()
 ```
 
-Then we would run the script like normal. `python3 my_script.py load lang-vocab words.xlsx -d french::vocab`
+Then we would run the script like normal. `python3 my_script.py pipe words.xlsx --model lang-vocab --into french::vocab`
 
 > Note that we are no longer using a *basic* model. That means we are assuming that a model called *lang-vocab* has already been created in the anki ui. See the [Anki documentation for adding a note type](https://docs.ankiweb.net/editing.html#adding-a-note-type) to learn how this is done.
 
@@ -349,28 +349,28 @@ from simplest to most involved. Install their dependencies with
 Both the `hanky` command and your own scripts share the same interface:
 
 ```
-[hanky | python3 my_script.py] <operation> <model> <file|dir> [pattern] [options]
+[hanky | python3 my_script.py] <operation> <file|dir> [pattern] --model MODEL [options]
 ```
 
-**`load`** — load cards from a single file:
+**`pipe`** — pipe cards from a single file into a deck:
 
 ```
-hanky load [-h] [-d DECK] [--fail-fast] [--args K=V ...] model file
-  model         Anki model/note-type name to create cards with.
+hanky pipe [-h] -m MODEL [--into DECK] [--fail-fast] [--args K=V ...] file
   file          File to load from (.csv, .json, or a registered extension).
-  -d, --deck    Destination deck. Defaults to the filename without extension.
+  -m, --model   Anki model/note-type name to create cards with. Required.
+  --into        Destination deck. Defaults to the filename without extension.
   --fail-fast   Stop and raise on the first card that can't be added, instead
                 of skipping it and reporting it at the end.
   --args        key=value args forwarded to your card processors (scripts only).
 ```
 
-**`load-dir`** — load many files from a directory, deriving deck names from paths:
+**`pipe-dir`** — pipe many files from a directory, deriving deck names from paths:
 
 ```
-hanky load-dir [-h] [-r] [--fail-fast] [--args K=V ...] model dir pattern
-  model            Anki model/note-type name to create cards with.
+hanky pipe-dir [-h] -m MODEL [-r] [--fail-fast] [--args K=V ...] dir pattern
   dir              Directory to load from.
   pattern          Glob selecting files, e.g. "*.csv".
+  -m, --model      Anki model/note-type name to create cards with. Required.
   -r, --recursive  Also descend into sub-directories.
   --fail-fast      Stop and raise on the first card that can't be added, instead
                    of skipping it and reporting it at the end.
@@ -381,7 +381,7 @@ For example, to load every CSV under `french/` while building deck names from
 the folder structure:
 
 ```sh
-hanky load-dir basic "french/" "*.csv" -r
+hanky pipe-dir "french/" "*.csv" --model basic -r
 ```
 
 ```

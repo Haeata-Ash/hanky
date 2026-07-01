@@ -12,5 +12,5 @@ def lowercase_card(card: dict):
 
 
 # run the hanky cli application by running this python file, for example:
-#   python3 demo_lowercase.py load basic words.csv -d english::vocab
+#   python3 demo_lowercase.py pipe words.csv --model basic --into english::vocab
 hanky.run()
