@@ -6,7 +6,7 @@ import requests
 from bs4 import BeautifulSoup
 from pydantic import BaseModel
 
-from hanky import CardMedia, Hanky
+from hanky import CardMedia, HankyPipeline
 
 
 # Claude model used to write the example sentences. See
@@ -128,7 +128,7 @@ def generate_neural_speech(utf_8_str: str, voice: str) -> bytes:
 
 
 # instantiate the hanky app
-hanky = Hanky()
+hanky = HankyPipeline()
 
 
 @hanky.card_processor("lang-vocab", expected_args=[], card_fields=["word"])

@@ -11,7 +11,9 @@ def test_media_written_and_temp_ref_replaced(app):
 
     app.register_card_processor("Basic", add_audio)
 
-    report = app.load_cards([{"Front": "chien", "Back": "dog"}], "Basic", "French")
+    report = app.import_from_source(
+        [{"Front": "chien", "Back": "dog"}], "Basic", "French"
+    )
 
     assert report.added == 1
 
@@ -23,7 +25,7 @@ def test_media_written_and_temp_ref_replaced(app):
     assert col.media.have(media.desired_name)
 
 
-def test_load_cards_accumulates_media_from_a_list(app):
+def test_import_from_source_accumulates_media_from_a_list(app):
     one = CardMedia(b"audio-one", ".mp3")
     two = CardMedia(b"audio-two", ".mp3")
 
@@ -33,7 +35,9 @@ def test_load_cards_accumulates_media_from_a_list(app):
 
     app.register_card_processor("Basic", add_two)
 
-    report = app.load_cards([{"Front": "chat", "Back": "cat"}], "Basic", "French")
+    report = app.import_from_source(
+        [{"Front": "chat", "Back": "cat"}], "Basic", "French"
+    )
 
     assert report.added == 1
 

@@ -1,3 +1,4 @@
+import warnings
 from contextlib import contextmanager
 from pathlib import Path
 from typing import (
@@ -24,9 +25,10 @@ from hanky.report import CardError, LoadReport
 _DEFAULT_CONFIG_PATH = Path("~/.config/hanky/hanky.toml").expanduser()
 
 
-class Hanky:
-    """Manages interactions with the anki collection and exposes a simplified interface for adding cards.
-    Optionally runnable as a CLI application.
+class HankyPipeline:
+    """An ETL style pipeline for adding flash cards to anki. The class manages
+    interactions with the anki collection and exposes a simplified interface
+    for adding transformation logic. Optionally runnable as a CLI application.
 
     Keeps track of 'card processor' functions/callables which enrich or
     transform their data before adding the card to the database.
@@ -40,7 +42,7 @@ class Hanky:
     """
 
     def __init__(self, config: Optional[Config] = None):
-        """Initializes a Hanky application object
+        """Initializes a HankyPipeline application object
 
         Note: if no config object is provided, hanky will try load from the default config location,
         before finally using the default configuration values if the file does not exist.
@@ -247,7 +249,7 @@ class Hanky:
             )
         return self.loaders[suffix]
 
-    def load_cards(
+    def import_from_source(
         self,
         source: Iterable[Mapping],
         model_name: str,
@@ -329,7 +331,7 @@ class Hanky:
 
             return LoadReport(added=added, skipped=skipped, errors=errors)
 
-    def load_deck(
+    def import_from_file(
         self,
         fpath: str,
         model_name: str,
@@ -340,7 +342,7 @@ class Hanky:
         """Load cards from a file into a deck.
 
         Reads the file using the loader registered for its extension and feeds
-        the resulting dictionaries into :meth:`load_cards`.
+        the resulting dictionaries into :meth:`import_from_source`.
 
         Args:
             fpath: the path to the file
@@ -360,12 +362,12 @@ class Hanky:
         deck_name = deck_name if deck_name else path.stem
 
         source = self.get_loader(path.suffix)(str(path))
-        report = self.load_cards(
+        report = self.import_from_source(
             source, model_name, deck_name, fail_fast=fail_fast, **model_args
         )
         return report.with_source(str(path))
 
-    def load_dir(
+    def import_from_dir(
         self,
         model: str,
         root_dir: str,
@@ -419,7 +421,7 @@ class Hanky:
 
         report = LoadReport()
 
-        # open collection session once, nested calls in load_deck
+        # open collection session once, nested calls in import_from_file
         # will reuse the session
         with self.session() as _:
             for path in _glob(root, glob_pattern, recursive):
@@ -439,7 +441,7 @@ class Hanky:
                     deck_list.append(path.stem)
                     full_deck = "::".join(deck_list)
 
-                    report += self.load_deck(
+                    report += self.import_from_file(
                         str(abs_path),
                         model,
                         deck_name=full_deck,
@@ -449,8 +451,38 @@ class Hanky:
 
         return report
 
+    def load_cards(self, *args, **kwargs) -> LoadReport:
+        """Deprecated alias for :meth:`import_from_source`.
+
+        .. deprecated:: 0.2.0
+            Renamed to :meth:`import_from_source`; this alias will be
+            removed in 0.3.0.
+        """
+        _warn_renamed("load_cards", "import_from_source")
+        return self.import_from_source(*args, **kwargs)
+
+    def load_deck(self, *args, **kwargs) -> LoadReport:
+        """Deprecated alias for :meth:`import_from_file`.
+
+        .. deprecated:: 0.2.0
+            Renamed to :meth:`import_from_file`; this alias will be
+            removed in 0.3.0.
+        """
+        _warn_renamed("load_deck", "import_from_file")
+        return self.import_from_file(*args, **kwargs)
+
+    def load_dir(self, *args, **kwargs) -> LoadReport:
+        """Deprecated alias for :meth:`import_from_dir`.
+
+        .. deprecated:: 0.2.0
+            Renamed to :meth:`import_from_dir`; this alias will be
+            removed in 0.3.0.
+        """
+        _warn_renamed("load_dir", "import_from_dir")
+        return self.import_from_dir(*args, **kwargs)
+
     def run(self) -> None:
-        """Run the Hanky object as a CLI application. This method
+        """Run the HankyPipeline object as a CLI application. This method
         performs a backup of the current anki collection.
 
         """
@@ -460,8 +492,36 @@ class Hanky:
         _run_app(self)
 
 
-def _run_app(app: Hanky, args: Optional[Sequence[str]] = None):
-    """Run a Hanky object as a CLI application"""
+class Hanky(HankyPipeline):
+    """Deprecated alias for :class:`HankyPipeline`.
+
+    .. deprecated:: 0.2.0
+        Renamed to :class:`HankyPipeline`; this alias will be removed in
+        0.3.0.
+    """
+
+    def __init__(self, *args, **kwargs):
+        warnings.warn(
+            "Hanky has been renamed to HankyPipeline. The 'Hanky' name is "
+            "deprecated and will be removed in 0.3.0.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        super().__init__(*args, **kwargs)
+
+
+def _warn_renamed(old: str, new: str) -> None:
+    """Emit a deprecation warning for a renamed method."""
+    warnings.warn(
+        f"{old}() has been renamed to {new}(). The '{old}' name is "
+        f"deprecated and will be removed in 0.3.0.",
+        DeprecationWarning,
+        stacklevel=3,
+    )
+
+
+def _run_app(app: HankyPipeline, args: Optional[Sequence[str]] = None):
+    """Run a HankyPipeline object as a CLI application"""
 
     # check if we should show --args option
     # no need if there are no defined card processors
@@ -484,7 +544,7 @@ def _run_app(app: Hanky, args: Optional[Sequence[str]] = None):
     report = LoadReport()
     if parsed_args.operation == "load":
         print(f"Loading into deck {parsed_args.deck} from file {parsed_args.file}")
-        report = app.load_deck(
+        report = app.import_from_file(
             parsed_args.file,
             parsed_args.model,
             deck_name=parsed_args.deck,
@@ -494,7 +554,7 @@ def _run_app(app: Hanky, args: Optional[Sequence[str]] = None):
 
     elif parsed_args.operation == "load-dir":
         print(f"Loading from dirrectory {parsed_args.dir}")
-        report = app.load_dir(
+        report = app.import_from_dir(
             parsed_args.model,
             parsed_args.dir,
             parsed_args.pattern,

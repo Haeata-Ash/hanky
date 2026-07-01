@@ -47,11 +47,11 @@ See [Card Processors & Pipelines](#card-processors--pipelines) or the [demo fold
 
 ```python
 # my_script.py
-from hanky import Hanky
+from hanky import HankyPipeline
 
 
 # instantiate the hanky app
-hanky = Hanky()
+hanky = HankyPipeline()
 
 
 @hanky.card_processor("basic", expected_args=[], card_fields=[])
@@ -130,14 +130,14 @@ ALLOW_DUPLICATES = false
 BACKUP_FOLDER = "~/.local/share/hanky/backups"
 ```
 
-**2. A `Config` object passed to `Hanky(...)`** in your script (takes precedence
+**2. A `Config` object passed to `HankyPipeline(...)`** in your script (takes precedence
 over the file). Useful if you want different config for different scripts:
 
 ```python
-from hanky import Hanky
+from hanky import HankyPipeline
 from hanky.config import Config
 
-hanky = Hanky(config=Config(ALLOW_DUPLICATES=True))
+hanky = HankyPipeline(config=Config(ALLOW_DUPLICATES=True))
 ```
 
 ## Card Processors & Pipelines
@@ -146,7 +146,7 @@ A **card processor** is a Python function that runs on each card *before* it is
 added to Anki. You could use one to enrich a card (fetch a translation, generate audio) or
 transform it (lower-case a field, render LaTeX).
 
-Multiple processors can be registered on a `Hanky` app to create a pipeline.
+Multiple processors can be registered on a `HankyPipeline` app to create a pipeline.
 
 ### The processor contract
 
@@ -214,7 +214,7 @@ The two processors in our pipeline will be:
 Note that for brevity the `scrape_wordreference` and `generate_neural_speech` functions are not included. See the [full demo file](https://github.com/Haeata-Ash/hanky/blob/main/demo/demo_scrape.py) for the complete code.
 
 ```python
-from hanky import CardMedia, Hanky
+from hanky import CardMedia, HankyPipeline
 
 def scrape_wordreference(word: str, lang_pair: str) -> tuple[str, str]:
     ...
@@ -222,7 +222,7 @@ def scrape_wordreference(word: str, lang_pair: str) -> tuple[str, str]:
 def generate_neural_speech(utf_8_str: str, voice: str) -> bytes:
     ...
 
-hanky = Hanky()
+hanky = HankyPipeline()
 
 # Stage 1: requires `word` (this comes straight from the csv), produces `translation` + `example`.
 @hanky.card_processor("lang-vocab", expected_args=[], card_fields=["word"])
@@ -286,14 +286,14 @@ hanky.register_loader(".xlsx", excel_loader, is_text=False)
 ## Loading from non-file sources
 
 The CLI loads cards from files, but you can also build cards in your own script
-and add them by calling `load_cards` directly. It takes any iterable of dicts,
+and add them by calling `import_from_source` directly. It takes any iterable of dicts,
 one dict per card, so the source can be a list, a generator, rows from an API,
 or anything else.
 
 ```python
 import random
 
-from hanky import Hanky
+from hanky import HankyPipeline
 
 DICTIONARY = {
     "ephemeral": "lasting for a very short time",
@@ -304,7 +304,7 @@ DICTIONARY = {
     # ...
 }
 
-hanky = Hanky()
+hanky = HankyPipeline()
 
 
 def random_word_cards(n):
@@ -313,11 +313,11 @@ def random_word_cards(n):
 
 
 # add 20 cards straight from the generator, with no file involved
-report = hanky.load_cards(random_word_cards(20), "basic", "english::vocab")
+report = hanky.import_from_source(random_word_cards(20), "basic", "english::vocab")
 print(f"Added {report.added}, skipped {report.skipped}, failed {report.failed}.")
 ```
 
-`load_cards` runs the same processor pipeline as the CLI and returns a
+`import_from_source` runs the same processor pipeline as the CLI and returns a
 `LoadReport` with counts of the cards that were added, skipped, and failed.
 
 ## Examples
@@ -329,7 +329,7 @@ from simplest to most involved. Install their dependencies with
 - [`demo_lowercase.py`](https://github.com/Haeata-Ash/hanky/blob/main/demo/demo_lowercase.py) — The minimal example: a single,
   dependency-free processor that lower-cases every field on a card.
 - [`demo_random_words.py`](https://github.com/Haeata-Ash/hanky/blob/main/demo/demo_random_words.py) — A non-file source: builds
-  cards from an in-script word list and adds them with `load_cards`.
+  cards from an in-script word list and adds them with `import_from_source`.
 - [`demo_define.py`](https://github.com/Haeata-Ash/hanky/blob/main/demo/demo_define.py) — A single processor that fills the
   back of each card with a dictionary definition of the word on its front,
   looked up offline via WordNet (NLTK).

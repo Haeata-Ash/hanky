@@ -1,8 +1,8 @@
-from hanky import Hanky
+from hanky import HankyPipeline
 
 
 # instantiate the hanky app
-hanky = Hanky()
+hanky = HankyPipeline()
 
 
 @hanky.card_processor("basic", expected_args=[], card_fields=[])

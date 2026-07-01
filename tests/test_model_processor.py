@@ -215,7 +215,7 @@ def test_wrapped_exception_includes_card_context():
         p({"Front": "chien"})
 
     # the processor is model-agnostic: it knows the card but not the model,
-    # which is supplied later by Hanky (see test_load.py).
+    # which is supplied later by HankyPipeline (see test_load.py).
     assert "chien" in str(exc_info.value)
     assert exc_info.value.card == {"Front": "chien"}
     assert exc_info.value.model is None

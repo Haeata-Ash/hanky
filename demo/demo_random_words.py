@@ -1,7 +1,7 @@
 import random
 from typing import Iterator
 
-from hanky import Hanky
+from hanky import HankyPipeline
 
 
 # A small word/meaning dictionary to draw cards from. In a real script this
@@ -47,10 +47,10 @@ def random_word_cards(n: int) -> Iterator[dict]:
         yield {"Front": word, "Back": DICTIONARY[word]}
 
 
-hanky = Hanky()
+hanky = HankyPipeline()
 
-# load_cards takes any iterable of dicts, so the cards can come straight from
-# the generator above without ever touching a file.
-report = hanky.load_cards(random_word_cards(20), "basic", "english::vocab")
+# import_from_source takes any iterable of dicts, so the cards can come straight
+# from the generator above without ever touching a file.
+report = hanky.import_from_source(random_word_cards(20), "basic", "english::vocab")
 
 print(f"Added {report.added}, skipped {report.skipped}, failed {report.failed}.")

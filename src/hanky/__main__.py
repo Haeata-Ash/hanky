@@ -1,8 +1,8 @@
-from hanky import Hanky
+from hanky import HankyPipeline
 
 
 def main():
-    hanky = Hanky()
+    hanky = HankyPipeline()
     hanky.run()
 
 
