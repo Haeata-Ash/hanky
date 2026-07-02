@@ -18,6 +18,12 @@ from hanky.anki_utils import add_card, add_deck, add_media, backup_collection
 from hanky.processors import CardProcessingException, ModelProcessor
 from hanky.cli import DEPRECATED_OPERATIONS, _warn_deprecated_operation, make_parser
 from hanky.config import Config
+from hanky.errors import (
+    CollectionInUseError,
+    CollectionNotFoundError,
+    ModelNotFoundError,
+    UnsupportedFileTypeError,
+)
 from hanky.fs import DEFAULT_LOADERS, Loader, has_handle, make_file_loader
 from hanky.media import CardMedia
 from hanky.report import CardError, LoadReport
@@ -93,16 +99,16 @@ class HankyPipeline:
             db_path = Path(self.config.ANKI_DB_PATH).expanduser().absolute()
 
             if not db_path.exists() or not db_path.is_file():
-                raise FileNotFoundError(
+                raise CollectionNotFoundError(
                     f"'{db_path}' either does not exist or is not a file. Please check the provided path to the anki collection."
                 )
 
             if self.config.DO_SAFETY_CHECK:
                 if has_handle(self.config.ANKI_DB_PATH):
-                    raise RuntimeError(
-                        """At least one other process is using the anki database. 
-                        Ensure the Anki application is closed before using Hanky to 
-                        avoid possible database corruption."""
+                    raise CollectionInUseError(
+                        "At least one other process is using the anki database. "
+                        "Ensure the Anki application is closed before using Hanky "
+                        "to avoid possible database corruption."
                     )
 
             self._col = Collection(str(db_path))
@@ -242,7 +248,7 @@ class HankyPipeline:
         suffix = suffix.lower()
         if suffix not in self.loaders:
             supported = ", ".join(sorted(self.loaders)) or "none"
-            raise ValueError(
+            raise UnsupportedFileTypeError(
                 f"No loader is registered for the file extension '{suffix}'. "
                 f"Supported extensions: {supported}. Register a loader for "
                 f"this extension with register_loader()."
@@ -275,7 +281,7 @@ class HankyPipeline:
             A :class:`LoadReport` describing what was added, skipped and failed.
 
         Raises:
-            KeyError: the model does not exist in the collection
+            ModelNotFoundError: the model does not exist in the collection
             Exception: if ``fail_fast`` is set, whatever a bad card raised
         """
         transformers = self.get_model_processors(model_name)
@@ -283,7 +289,7 @@ class HankyPipeline:
         with self.session() as col:
             model = col.models.by_name(model_name)
             if not model:
-                raise KeyError(
+                raise ModelNotFoundError(
                     f"Model '{model_name}' does not exist in your anki collection. Ensure it has been added before using it with hanky."
                 )
 

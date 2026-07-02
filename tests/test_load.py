@@ -2,6 +2,7 @@ from types import MappingProxyType
 
 import pytest
 
+from hanky.errors import ModelNotFoundError
 from hanky.processors import CardProcessingException
 
 
@@ -77,8 +78,8 @@ def test_import_from_source_accepts_a_non_dict_mapping(app):
     assert app._open_collection().note_count() == 1
 
 
-def test_import_from_source_unknown_model_raises_keyerror(app):
-    with pytest.raises(KeyError, match="NoSuchModel"):
+def test_import_from_source_unknown_model_raises_model_not_found(app):
+    with pytest.raises(ModelNotFoundError, match="NoSuchModel"):
         app.import_from_source([{"Front": "a", "Back": "b"}], "NoSuchModel", "French")
 
 
@@ -90,7 +91,7 @@ def test_import_from_source_unknown_model_does_not_consume_the_source(app):
             consumed.append(item)
             yield item
 
-    with pytest.raises(KeyError):
+    with pytest.raises(ModelNotFoundError):
         app.import_from_source(source(), "NoSuchModel", "French")
 
     # the model check must happen before the source is iterated, so a source
@@ -99,7 +100,7 @@ def test_import_from_source_unknown_model_does_not_consume_the_source(app):
 
 
 def test_import_from_source_unknown_model_does_not_create_a_deck(app):
-    with pytest.raises(KeyError):
+    with pytest.raises(ModelNotFoundError):
         app.import_from_source([{"Front": "a", "Back": "b"}], "NoSuchModel", "French")
 
     assert app._open_collection().decks.id("French", create=False) is None

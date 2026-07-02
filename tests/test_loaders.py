@@ -3,6 +3,7 @@ import json
 
 import pytest
 
+from hanky.errors import UnsupportedFileTypeError
 from hanky.fs import json_loader
 
 
@@ -40,8 +41,8 @@ def test_import_from_file_reads_a_single_object_json_file(app, tmp_path):
     assert app._open_collection().note_count() == 1
 
 
-def test_get_loader_unknown_extension_raises_helpful_value_error(app):
-    with pytest.raises(ValueError, match=r"\.txt"):
+def test_get_loader_unknown_extension_raises_helpful_error(app):
+    with pytest.raises(UnsupportedFileTypeError, match=r"\.txt"):
         app.get_loader(".txt")
 
 
