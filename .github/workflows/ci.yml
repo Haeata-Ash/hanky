@@ -58,8 +58,6 @@ jobs:
         with:
           enable-cache: true
       - name: Install dependencies
-        # --extra tos pulls boto3 so the TOS-dependent tests run, matching
-        # the old hatch-test environment.
-        run: uv sync --python ${{ matrix.python-version }} --extra tos
+        run: uv sync --python ${{ matrix.python-version }}
       - name: Run tests
         run: uv run --python ${{ matrix.python-version }} pytest

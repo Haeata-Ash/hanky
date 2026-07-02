@@ -398,16 +398,11 @@ wheels = [
 
 [[package]]
 name = "hanky"
-version = "0.2.2"
+version = "0.2.3"
 source = { editable = "." }
 dependencies = [
     { name = "anki" },
     { name = "psutil" },
-]
-
-[package.optional-dependencies]
-tos = [
-    { name = "boto3" },
 ]
 
 [package.dev-dependencies]
@@ -437,10 +432,8 @@ dev = [
 [package.metadata]
 requires-dist = [
     { name = "anki" },
-    { name = "boto3", marker = "extra == 'tos'" },
     { name = "psutil" },
 ]
-provides-extras = ["tos"]
 
 [package.metadata.requires-dev]
 demos = [

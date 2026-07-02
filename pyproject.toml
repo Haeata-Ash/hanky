@@ -16,16 +16,11 @@ classifiers = [
 ]
 
 keywords = ["anki"]
-version = "0.2.2"
+version = "0.2.3"
 
 dependencies = [
   "anki",
   "psutil",
-]
-
-[project.optional-dependencies]
-tos = [
-  "boto3"
 ]
 
 [project.scripts]
