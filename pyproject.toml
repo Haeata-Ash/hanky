@@ -23,11 +23,6 @@ dependencies = [
   "psutil",
 ]
 
-[project.optional-dependencies]
-tos = [
-  "boto3"
-]
-
 [project.scripts]
 hanky = "hanky.__main__:main"
 

@@ -405,11 +405,6 @@ dependencies = [
     { name = "psutil" },
 ]
 
-[package.optional-dependencies]
-tos = [
-    { name = "boto3" },
-]
-
 [package.dev-dependencies]
 demos = [
     { name = "beautifulsoup4" },
@@ -437,10 +432,8 @@ dev = [
 [package.metadata]
 requires-dist = [
     { name = "anki" },
-    { name = "boto3", marker = "extra == 'tos'" },
     { name = "psutil" },
 ]
-provides-extras = ["tos"]
 
 [package.metadata.requires-dev]
 demos = [
