@@ -18,6 +18,7 @@ from hanky.anki_utils import add_card, add_deck, add_media, backup_collection
 from hanky.processors import CardProcessingException, ModelProcessor
 from hanky.cli import DEPRECATED_OPERATIONS, _warn_deprecated_operation, make_parser
 from hanky.config import Config
+from hanky.errors import CollectionInUseError
 from hanky.fs import DEFAULT_LOADERS, Loader, has_handle, make_file_loader
 from hanky.media import CardMedia
 from hanky.report import CardError, LoadReport
@@ -99,10 +100,10 @@ class HankyPipeline:
 
             if self.config.DO_SAFETY_CHECK:
                 if has_handle(self.config.ANKI_DB_PATH):
-                    raise RuntimeError(
-                        """At least one other process is using the anki database. 
-                        Ensure the Anki application is closed before using Hanky to 
-                        avoid possible database corruption."""
+                    raise CollectionInUseError(
+                        "At least one other process is using the anki database. "
+                        "Ensure the Anki application is closed before using Hanky "
+                        "to avoid possible database corruption."
                     )
 
             self._col = Collection(str(db_path))
