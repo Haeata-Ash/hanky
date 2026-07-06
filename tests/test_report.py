@@ -52,7 +52,7 @@ def test_import_from_file_records_the_file_path_against_errors(app, tmp_path):
         json.dumps([{"Front": "bonjour", "Back": "hello"}, {"Front": "chat"}])
     )
 
-    report = app.import_from_file(str(fpath), "Basic")
+    report = app.import_from_file(str(fpath))
 
     assert report.added == 1
     assert report.failed == 1

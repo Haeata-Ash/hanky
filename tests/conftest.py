@@ -33,11 +33,12 @@ def app(tmp_path, fake_default_config, fake_default_backup_folder):
     Collection(str(db_path)).close()
 
     app = HankyPipeline(
-        Config(
+        "Basic",
+        config=Config(
             ANKI_DB_PATH=str(db_path),
             DO_SAFETY_CHECK=False,
             BACKUP_FOLDER=str(tmp_path / "backups"),
-        )
+        ),
     )
     _ = app._open_collection()
     yield app
