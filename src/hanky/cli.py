@@ -20,6 +20,17 @@ def _add_fail_fast(subparser):
     )
 
 
+def _add_model_override(subparser):
+    subparser.add_argument(
+        "-m",
+        "--model",
+        dest="model",
+        required=False,
+        default=None,
+        help="Override the name of the anki model to create cards with.",
+    )
+
+
 def _add_processor_args(subparser):
     subparser.add_argument(
         "--args",
@@ -45,13 +56,7 @@ def make_parser(has_card_processors=False):
         "pipe", help="Pipe card(s) from a file into an anki deck."
     )
     pipe.add_argument("file", help="Path of the file to load from")
-    pipe.add_argument(
-        "-m",
-        "--model",
-        dest="model",
-        required=True,
-        help="Name of the anki model to create cards with.",
-    )
+    _add_model_override(pipe)
     pipe.add_argument(
         "--into",
         dest="deck",
@@ -71,13 +76,7 @@ def make_parser(has_card_processors=False):
         "pattern",
         help="Glob pattern used to decide which files to load. For example, '*.csv'",
     )
-    pipe_dir.add_argument(
-        "-m",
-        "--model",
-        dest="model",
-        required=True,
-        help="Name of the anki model to create cards with.",
-    )
+    _add_model_override(pipe_dir)
     pipe_dir.add_argument(
         "-r",
         "--recursive",
