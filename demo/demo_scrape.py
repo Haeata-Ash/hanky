@@ -1,14 +1,5 @@
 # mypy: disable-error-code="import-untyped"
 
-from typing import IO
-
-import boto3
-import pandas
-import requests
-from bs4 import BeautifulSoup
-
-from hanky import CardMedia, HankyPipeline
-
 """Example hanky script which builds English to French flash cards by *composing*
 two card processors:
 
@@ -20,6 +11,15 @@ two card processors:
 Run, e.g.:
     python3 demo_scrape.py pipe words.xlsx
 """
+
+from typing import IO
+
+import boto3
+import pandas
+import requests
+from bs4 import BeautifulSoup
+
+from hanky import CardMedia, HankyPipeline
 
 
 # WordReference language-pair path (English to French)
@@ -123,7 +123,7 @@ hanky.register_loader(".xlsx", excel_loader, is_text=False)
 
 @hanky.card_processor(expected_args=[], card_fields=["word"])
 def scrape_translation(card: dict):
-    """Get the English 'word' translation and example sentene from WordReference
+    """Get the English 'word' translation and example sentence from WordReference
     and write them to the 'translation' and 'example' fields on the card."""
 
     translation, example = scrape_wordreference(card["word"], WR_PAIR)

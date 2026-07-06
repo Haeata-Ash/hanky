@@ -1,10 +1,11 @@
+"""Example hanky script which utilizes aws polly (text to speech service) to
+generate foreign langauge audio for anki flash cards."""
+
 from typing import IO
 from hanky import HankyPipeline, CardMedia
 import boto3
 import pandas
 
-"""Example hanky script which utilizes aws polly (text to speech service) to
-generate foreign langauge audio for anki flash cards."""
 # constants which represent aws polly voices
 # See https://docs.aws.amazon.com/polly/latest/dg/available-voices.html
 GERMAN = "Vicki"
@@ -40,7 +41,7 @@ def excel_loader(f_obj: IO):
     Args:
         f_obj: file object to read from
     Yields:
-        dictionary of fields mapped to there values.
+        dictionary of fields mapped to their values.
     """
     df = pandas.read_excel(f_obj)
     for _, row in df.iterrows():
@@ -86,6 +87,6 @@ def lang_model(card: dict, lang):
 
 # run the hanky cml application by running this python file
 # For example, to load a deck of cards from file 'foods.xlsx'
-# python3 demo.py pipe foods.xlsx --args lang=french
+# python3 demo_audio.py pipe foods.xlsx --args lang=french
 if __name__ == "__main__":
     hanky.run()
