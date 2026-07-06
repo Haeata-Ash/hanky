@@ -14,7 +14,7 @@ from typing import (
 from anki.collection import Collection
 
 from hanky.anki_utils import add_card, add_deck, add_media, backup_collection
-from hanky.processors import CardProcessingException, ModelProcessor
+from hanky.processors import CardProcessingException, CardProcessor
 from hanky.cli import make_parser
 from hanky.config import Config
 from hanky.errors import (
@@ -68,7 +68,7 @@ class HankyPipeline:
 
         self._col: Optional[Collection] = None
         self._model = model
-        self.processors: List[ModelProcessor] = list()
+        self.processors: List[CardProcessor] = list()
         self.loaders: Dict[str, Callable[[str], Iterator[dict]]] = dict()
         for ext, spec in DEFAULT_LOADERS.items():
             self.register_loader(
@@ -199,7 +199,7 @@ class HankyPipeline:
         Returns:
             None
         """
-        self.processors.append(ModelProcessor(processor, expected_args, card_fields))
+        self.processors.append(CardProcessor(processor, expected_args, card_fields))
 
     def card_processor(self, expected_args: List[str], card_fields: List[str]):
         """Decorator which automatically registers a card processor function
