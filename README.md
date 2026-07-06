@@ -85,7 +85,7 @@ We would run our new script like so
 python3 my_script.py pipe words.csv --into english::vocab
 ```
 
-Here we tell hanky to **pipe** each word in `words.csv` through our `card_processors`, **transforming** each line of the csv with the `lowercase_card`, before finally adding each card, of note type `basic` (the model we set on the pipeline), into the anki deck `english::vocab`. A single run can target a different model by passing `--model`.
+Here we tell hanky to **pipe** each word in `words.csv` through our `card_processors`, **transforming** each line of the csv with the `lowercase_card`, before finally adding each card, of note type `basic` (the model we gave to the pipeline), into the anki deck `english::vocab`.
 
 This would leave us with a **english::vocab** deck containing the following cards:
 
@@ -149,10 +149,6 @@ transform it (lower-case a field, render LaTeX).
 Multiple processors can be registered on a `HankyPipeline` app to create a pipeline.
 
 ### The processor contract
-
-Processors are model-agnostic: the Anki model/note-type is set once on the
-pipeline itself (`HankyPipeline("basic")`), and every card the pipeline adds is
-created with that model (unless overridden for a run with `--model`).
 
 A processor is registered with two things:
 
@@ -355,10 +351,9 @@ Both the `hanky` command and your own scripts share the same interface:
 [hanky | python3 my_script.py] <operation> <file|dir> [pattern] [options]
 ```
 
-Cards are created with the model set on the pipeline (`HankyPipeline("basic")`);
-pass `-m/--model` to override it for a single run. The standalone `hanky`
-command has no script of its own, so it uses Anki's built-in `Basic` model
-unless you override it.
+Note that cards are created with the model set on the pipeline (`HankyPipeline("my-model")`). 
+Since standalone `hanky` command has no script of its own, it uses Anki's built-in 
+`Basic` model unless you override it.
 
 **`pipe`** — pipe cards from a single file into a deck:
 
