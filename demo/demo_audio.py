@@ -29,8 +29,8 @@ def generate_neural_speech(
     return res["AudioStream"].read()
 
 
-# instantiate the hanky app
-hanky = HankyPipeline()
+# instantiate the hanky app, creating cards with the "lang-vocab" model
+hanky = HankyPipeline("lang-vocab")
 
 
 # define our own excel card loader using the pandas library
@@ -51,8 +51,7 @@ def excel_loader(f_obj: IO):
 hanky.register_loader(".xlsx", excel_loader, is_text=False)
 
 
-# 1. Register the 'lang_model' function as a processor for cards of model/type
-# "lang-vocab"
+# 1. Register the 'lang_model' function as a card processor on the pipeline
 #
 # 2. Define the cml arguments neccessary to be passed to hanky. 'lang' is used to
 # choose the language, i.e '--args lang=french'
@@ -61,7 +60,7 @@ hanky.register_loader(".xlsx", excel_loader, is_text=False)
 # and 'target-lang' fields are assumed to be in the card. They could already be present
 # in the file or set by a previous card processor
 @hanky.card_processor(
-    "lang-vocab", expected_args=["lang"], card_fields=["native-lang", "target-lang"]
+    expected_args=["lang"], card_fields=["native-lang", "target-lang"]
 )
 def lang_model(card: dict, lang):
     """Generate the speech from the 'target-lang' field, add it as anki media then
@@ -87,5 +86,5 @@ def lang_model(card: dict, lang):
 
 # run the hanky cml application by running this python file
 # For example, to load a deck of cards from file 'foods.xlsx'
-# python3 demo.py pipe foods.xlsx --model lang-vocab --args lang=french
+# python3 demo.py pipe foods.xlsx --args lang=french
 hanky.run()
