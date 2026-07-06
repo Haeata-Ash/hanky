@@ -147,4 +147,5 @@ def add_audio(card: dict):
 
 # run the hanky cli application by running this python file, for example:
 #   python3 demo_scrape.py pipe words.xlsx
-hanky.run()
+if __name__ == "__main__":
+    hanky.run()

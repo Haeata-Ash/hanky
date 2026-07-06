@@ -57,4 +57,5 @@ def define_word(card: dict):
 
 # run the hanky cli application by running this python file, for example:
 #   python3 demo_define.py pipe words.csv --into english::vocab
-hanky.run()
+if __name__ == "__main__":
+    hanky.run()
