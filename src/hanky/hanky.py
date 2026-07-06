@@ -14,7 +14,7 @@ from typing import (
 from anki.collection import Collection
 
 from hanky.anki_utils import add_card, add_deck, add_media, backup_collection
-from hanky.processors import CardProcessingException, ModelProcessor
+from hanky.processors import CardProcessingException, CardProcessor
 from hanky.cli import make_parser
 from hanky.config import Config
 from hanky.errors import (
@@ -35,31 +35,40 @@ class HankyPipeline:
     interactions with the anki collection and exposes a simplified interface
     for adding transformation logic. Optionally runnable as a CLI application.
 
+    Cards are added using the anki model/note type the pipeline was constructed
+    with (a single CLI run can override it via --model).
+
     Keeps track of 'card processor' functions/callables which enrich or
     transform their data before adding the card to the database.
 
     Keeps track of 'loader' functions which read possibly incomplete card data from files.
 
     Attributes:
-        config: dictionary representing configuration and kwargs arguments
-        processors: dictionary of anki model names mapped to user defined callables
+        config: the pipeline's Config object, lazy loaded if not provided
+        processors: list of user defined card processor callables, in registration order
         loaders: dictionary of file extensions mapped to a function which reads card data
     """
 
-    def __init__(self, config: Optional[Config] = None):
+    def __init__(self, model: str, *, config: Optional[Config] = None):
         """Initializes a HankyPipeline application object
 
         Note: if no config object is provided, hanky will try load from the default config location,
         before finally using the default configuration values if the file does not exist.
 
         Args:
+            model: the name of the anki model/note type to create cards with
             config: custom config object
         """
+        if not isinstance(model, str):
+            raise TypeError(
+                "'model' must be the name of an anki model/note type (a string)"
+            )
+
         self._config = config
 
         self._col: Optional[Collection] = None
-
-        self.processors: Dict[str, List[ModelProcessor]] = dict()
+        self._model = model
+        self.processors: List[CardProcessor] = list()
         self.loaders: Dict[str, Callable[[str], Iterator[dict]]] = dict()
         for ext, spec in DEFAULT_LOADERS.items():
             self.register_loader(
@@ -167,12 +176,11 @@ class HankyPipeline:
 
     def register_card_processor(
         self,
-        model_name: str,
         processor: Callable[[dict], dict],
         expected_args: List[str] = [],
         card_fields: List[str] = [],
     ) -> None:
-        """Adds a python callable to be called when adding a card of type model.
+        """Adds a python callable to be called as a processor during a pipeline run.
 
         The callable will be called with the first argument being the card
         data (a dictionary mapping field names to values) BEFORE the card
@@ -183,8 +191,7 @@ class HankyPipeline:
         order in which they were registered.
 
         Args:
-            model_name: the name of the card model
-            processor: the callable to apply to the cards of the given model type
+            processor: the callable to apply to each card
             expected_args: list of arguments expected by the callable
             card_fields: list of fields expected to be present in the card
                 when the callable is applied
@@ -192,15 +199,9 @@ class HankyPipeline:
         Returns:
             None
         """
-        if model_name not in self.processors:
-            self.processors[model_name] = []
-        self.processors[model_name].append(
-            ModelProcessor(processor, expected_args, card_fields)
-        )
+        self.processors.append(CardProcessor(processor, expected_args, card_fields))
 
-    def card_processor(
-        self, model: str, expected_args: List[str], card_fields: List[str]
-    ):
+    def card_processor(self, expected_args: List[str], card_fields: List[str]):
         """Decorator which automatically registers a card processor function
 
         A card processor takes a card (dictionary of field, value pairs) and any
@@ -212,14 +213,14 @@ class HankyPipeline:
             - perform a mathmatical operation then write back the answer as a string
             - set a field of a card which is currently missing
 
-        The decoracted function will be called every time a card of type model
-        is added. The first argument to the decorated function will always be
-        the card data as a dictionary of fields, value pairs.
+        The decorated function will be called on every card each time the pipeline
+        is run, whether via the CLI or the import_from_* methods. The first argument
+        to the decorated function will always be the card data as a dictionary of
+        fields, value pairs.
 
         The decorated function must return a dictionary.
 
         Args:
-            model_name: the name of the card model
             expected_args: list of named arguments expected by the card processor.
                 They will be passed in as key word arguments.
             card_fields: list of fields expected to be present in the card
@@ -230,17 +231,10 @@ class HankyPipeline:
         """
 
         def decorator(func):
-            self.register_card_processor(model, func, expected_args, card_fields)
+            self.register_card_processor(func, expected_args, card_fields)
             return func
 
         return decorator
-
-    def get_model_processors(self, model_name: str) -> List[ModelProcessor]:
-        """Get all card processors for a particular model"""
-        if model_name in self.processors:
-            return self.processors[model_name]
-
-        return []
 
     def get_loader(self, suffix) -> Callable:
         """Get the loader function for a particular file extension"""
@@ -257,7 +251,6 @@ class HankyPipeline:
     def import_from_source(
         self,
         source: Iterable[Mapping],
-        model_name: str,
         deck_name: str,
         fail_fast: bool = False,
         **model_args,
@@ -271,7 +264,6 @@ class HankyPipeline:
         Args:
             source: any iterable yielding dictionaries (mappings) of card
                 field names to values
-            model_name: The anki model/card type of the cards
             deck_name: the name of the destination deck
             fail_fast: raise on the first bad card instead of collecting it
             **model_args: arguments to provide to the card processor functions
@@ -280,16 +272,15 @@ class HankyPipeline:
             A :class:`LoadReport` describing what was added, skipped and failed.
 
         Raises:
-            ModelNotFoundError: the model does not exist in the collection
+            ModelNotFoundError: the pipeline's model does not exist in the collection
             Exception: if ``fail_fast`` is set, whatever a bad card raised
         """
-        transformers = self.get_model_processors(model_name)
 
         with self.session() as col:
-            model = col.models.by_name(model_name)
+            model = col.models.by_name(self._model)
             if not model:
                 raise ModelNotFoundError(
-                    f"Model '{model_name}' does not exist in your anki collection. Ensure it has been added before using it with hanky."
+                    f"Model '{self._model}' does not exist in your anki collection. Ensure it has been added before using it with hanky."
                 )
 
             add_deck(col, deck_name)
@@ -301,12 +292,12 @@ class HankyPipeline:
                 try:
                     if not isinstance(item, Mapping):
                         raise ValueError(
-                            f"Card source for model '{model_name}' yielded a "
+                            f"Card source for model '{self._model}' yielded a "
                             f"{type(item).__name__}, expected a dictionary (mapping)."
                         )
                     card = dict(item)
                     media: List[CardMedia] = []
-                    for t in transformers:
+                    for t in self.processors:
                         card, new_media = t(card, **model_args)
                         media += new_media
 
@@ -319,7 +310,7 @@ class HankyPipeline:
                     if add_card(
                         col,
                         deck_name,
-                        model_name,
+                        self._model,
                         allow_duplicates=self.config.ALLOW_DUPLICATES,
                         **card,
                     ):
@@ -329,7 +320,7 @@ class HankyPipeline:
                 except Exception as e:
                     # inject model info into exception which processor doesn't know
                     if isinstance(e, CardProcessingException):
-                        e.model = model_name
+                        e.model = self._model
                     if fail_fast:
                         raise
                     errors.append(CardError(card=item, error=str(e)))
@@ -339,7 +330,6 @@ class HankyPipeline:
     def import_from_file(
         self,
         fpath: str,
-        model_name: str,
         deck_name: Optional[str] = None,
         fail_fast: bool = False,
         **model_args,
@@ -351,7 +341,6 @@ class HankyPipeline:
 
         Args:
             fpath: the path to the file
-            model_name: The anki model/card type of the cards in the file
             deck_name: Optionally the name of the deck. Defaults to the
                 filename without its extension.
             fail_fast: raise on the first bad card instead of collecting it
@@ -368,13 +357,12 @@ class HankyPipeline:
 
         source = self.get_loader(path.suffix)(str(path))
         report = self.import_from_source(
-            source, model_name, deck_name, fail_fast=fail_fast, **model_args
+            source, deck_name, fail_fast=fail_fast, **model_args
         )
         return report.with_source(str(path))
 
     def import_from_dir(
         self,
-        model: str,
         root_dir: str,
         glob_pattern: str,
         recursive=False,
@@ -402,7 +390,6 @@ class HankyPipeline:
         french::grammar::passe_compose
 
         Args:
-            model_name: The anki model/card type of the cards which will be loaded
             root_dir: The root directory in which to find the files
             glob_pattern: A glob pattern such as '*.csv' to match the desired files
             recursive: whether or not to descend into sub directories, defaults to false
@@ -448,7 +435,6 @@ class HankyPipeline:
 
                     report += self.import_from_file(
                         str(abs_path),
-                        model,
                         deck_name=full_deck,
                         fail_fast=fail_fast,
                         **model_args,
@@ -488,12 +474,15 @@ def _run_app(app: HankyPipeline, args: Optional[Sequence[str]] = None):
     except AttributeError:
         pass
 
+    # TODO: shouldn't really mutate _model like this
+    if parsed_args.model is not None:
+        app._model = parsed_args.model
+
     report = LoadReport()
     if parsed_args.operation == "pipe":
         print(f"Loading into deck {parsed_args.deck} from file {parsed_args.file}")
         report = app.import_from_file(
             parsed_args.file,
-            parsed_args.model,
             deck_name=parsed_args.deck,
             fail_fast=parsed_args.fail_fast,
             **model_args,
@@ -502,7 +491,6 @@ def _run_app(app: HankyPipeline, args: Optional[Sequence[str]] = None):
     elif parsed_args.operation == "pipe-dir":
         print(f"Loading from dirrectory {parsed_args.dir}")
         report = app.import_from_dir(
-            parsed_args.model,
             parsed_args.dir,
             parsed_args.pattern,
             parsed_args.is_rec,

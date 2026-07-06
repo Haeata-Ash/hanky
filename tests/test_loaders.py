@@ -35,7 +35,7 @@ def test_import_from_file_reads_a_single_object_json_file(app, tmp_path):
     fpath = tmp_path / "french.json"
     fpath.write_text(json.dumps({"Front": "bonjour", "Back": "hello"}))
 
-    report = app.import_from_file(str(fpath), "Basic")
+    report = app.import_from_file(str(fpath))
 
     assert report.added == 1
     assert app._open_collection().note_count() == 1
@@ -60,7 +60,7 @@ def test_import_from_file_reads_an_uppercase_extension(app, tmp_path):
     fpath = tmp_path / "FRENCH.CSV"
     fpath.write_text("Front,Back\nbonjour,hello\n")
 
-    report = app.import_from_file(str(fpath), "Basic")
+    report = app.import_from_file(str(fpath))
 
     assert report.added == 1
     assert app._open_collection().note_count() == 1

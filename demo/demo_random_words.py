@@ -47,10 +47,10 @@ def random_word_cards(n: int) -> Iterator[dict]:
         yield {"Front": word, "Back": DICTIONARY[word]}
 
 
-hanky = HankyPipeline()
+hanky = HankyPipeline("basic")
 
 # import_from_source takes any iterable of dicts, so the cards can come straight
 # from the generator above without ever touching a file.
-report = hanky.import_from_source(random_word_cards(20), "basic", "english::vocab")
+report = hanky.import_from_source(random_word_cards(20), "english::vocab")
 
 print(f"Added {report.added}, skipped {report.skipped}, failed {report.failed}.")

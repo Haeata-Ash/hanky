@@ -1,16 +1,17 @@
 from hanky import HankyPipeline
 
 
-# instantiate the hanky app
-hanky = HankyPipeline()
+# instantiate the hanky app, creating cards with the "basic" model
+hanky = HankyPipeline("basic")
 
 
-@hanky.card_processor("basic", expected_args=[], card_fields=[])
+@hanky.card_processor(expected_args=[], card_fields=[])
 def lowercase_card(card: dict):
     """Lower-case the text on every field of the card."""
     return {field: value.lower() for field, value in card.items()}
 
 
 # run the hanky cli application by running this python file, for example:
-#   python3 demo_lowercase.py pipe words.csv --model basic --into english::vocab
+#   python3 demo_lowercase.py pipe words.csv --into english::vocab
+# (pass --model to override the model set on the pipeline above)
 hanky.run()

@@ -9,11 +9,9 @@ def test_media_written_and_temp_ref_replaced(app):
         card["Back"] = f"{card['Back']} {temp_ref}"
         return card, media
 
-    app.register_card_processor("Basic", add_audio)
+    app.register_card_processor(add_audio)
 
-    report = app.import_from_source(
-        [{"Front": "chien", "Back": "dog"}], "Basic", "French"
-    )
+    report = app.import_from_source([{"Front": "chien", "Back": "dog"}], "French")
 
     assert report.added == 1
 
@@ -33,11 +31,9 @@ def test_import_from_source_accumulates_media_from_a_list(app):
         card["Front"] = f"{card['Front']} {one.media_ref} {two.media_ref}"
         return card, [one, two]
 
-    app.register_card_processor("Basic", add_two)
+    app.register_card_processor(add_two)
 
-    report = app.import_from_source(
-        [{"Front": "chat", "Back": "cat"}], "Basic", "French"
-    )
+    report = app.import_from_source([{"Front": "chat", "Back": "cat"}], "French")
 
     assert report.added == 1
 

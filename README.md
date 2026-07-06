@@ -50,18 +50,18 @@ See [Card Processors & Pipelines](#card-processors--pipelines) or the [demo fold
 from hanky import HankyPipeline
 
 
-# instantiate the hanky app
-hanky = HankyPipeline()
+# instantiate the hanky app, creating cards with the "basic" model
+hanky = HankyPipeline("basic")
 
 
-@hanky.card_processor("basic", expected_args=[], card_fields=[])
+@hanky.card_processor(expected_args=[], card_fields=[])
 def lowercase_card(card: dict):
     """Lower-case the text on every field of the card."""
     return {field: value.lower() for field, value in card.items()}
 
 
 # run the hanky cli application by running this python file, for example:
-#   python3 my_script.py pipe words.csv --model basic --into english::vocab
+#   python3 my_script.py pipe words.csv --into english::vocab
 hanky.run()
 
 ```
@@ -82,10 +82,10 @@ Ephemeral,Lasting A VERY Short Time
 We would run our new script like so
 
 ```sh
-python3 my_script.py pipe words.csv --model basic --into english::vocab
+python3 my_script.py pipe words.csv --into english::vocab
 ```
 
-Here we tell hanky to **pipe** each word in `words.csv` through our `card_processors`, **transforming** each line of the csv with the `lowercase_card`, before finally adding each card, of note type `basic`, into the anki deck `english::vocab`.
+Here we tell hanky to **pipe** each word in `words.csv` through our `card_processors`, **transforming** each line of the csv with the `lowercase_card`, before finally adding each card, of note type `basic` (the model we set on the pipeline), into the anki deck `english::vocab`. A single run can target a different model by passing `--model`.
 
 This would leave us with a **english::vocab** deck containing the following cards:
 
@@ -137,7 +137,7 @@ over the file). Useful if you want different config for different scripts:
 from hanky import HankyPipeline
 from hanky.config import Config
 
-hanky = HankyPipeline(config=Config(ALLOW_DUPLICATES=True))
+hanky = HankyPipeline("basic", config=Config(ALLOW_DUPLICATES=True))
 ```
 
 ## Card Processors & Pipelines
@@ -150,17 +150,20 @@ Multiple processors can be registered on a `HankyPipeline` app to create a pipel
 
 ### The processor contract
 
-A processor is registered with three things:
+Processors are model-agnostic: the Anki model/note-type is set once on the
+pipeline itself (`HankyPipeline("basic")`), and every card the pipeline adds is
+created with that model (unless overridden for a run with `--model`).
+
+A processor is registered with two things:
 
 ```python
-@hanky.card_processor(model, expected_args=[...], card_fields=[...])
+@hanky.card_processor(expected_args=[...], card_fields=[...])
 def my_processor(card: dict, **expected_args):
     ...
 ```
 
 | Part | Meaning |
 | --- | --- |
-| `model` | The Anki model/note-type name. The processor runs on every card of this model. |
 | `expected_args` | Names of CLI arguments the processor needs. They are passed in from the command line via `--args key=value` and arrive as keyword arguments. For example, you might have the same pipeline for different languages, so you would pass in `lang=german` or `lang=french`|
 | `card_fields` | Fields that **must already be present** on the card when this processor runs. Hanky checks this and raises a clear error if one is missing. It lets a processor declare what an *earlier* step must have produced. |
 
@@ -168,7 +171,7 @@ When hanky calls your processors, the first argument is always the `card`; a pla
 
 
 ```python
-@hanky.card_processor(model, expected_args=["lang"], card_fields=[...])
+@hanky.card_processor(expected_args=["lang"], card_fields=[...])
 def my_processor(card: dict, lang):
     ...
 ```
@@ -222,10 +225,10 @@ def scrape_wordreference(word: str, lang_pair: str) -> tuple[str, str]:
 def generate_neural_speech(utf_8_str: str, voice: str) -> bytes:
     ...
 
-hanky = HankyPipeline()
+hanky = HankyPipeline("lang-vocab")
 
 # Stage 1: requires `word` (this comes straight from the csv), produces `translation` + `example`.
-@hanky.card_processor("lang-vocab", expected_args=[], card_fields=["word"])
+@hanky.card_processor(expected_args=[], card_fields=["word"])
 def scrape_translation(card: dict):
     translation, example = scrape_wordreference(card["word"], "enfr")
     card["translation"] = translation
@@ -233,7 +236,7 @@ def scrape_translation(card: dict):
     return card
 
 # Stage 2: requires `translation` (from stage 1), attaches audio media.
-@hanky.card_processor("lang-vocab", expected_args=[], card_fields=["translation"])
+@hanky.card_processor(expected_args=[], card_fields=["translation"])
 def add_audio(card: dict):
     speech = generate_neural_speech(card["translation"], voice="Lea")
     audio = CardMedia(speech, ".mp3")
@@ -243,9 +246,9 @@ def add_audio(card: dict):
 hanky.run()
 ```
 
-Then we would run the script like normal. `python3 my_script.py pipe words.xlsx --model lang-vocab --into french::vocab`
+Then we would run the script like normal. `python3 my_script.py pipe words.xlsx --into french::vocab`
 
-> Note that we are no longer using a *basic* model. That means we are assuming that a model called *lang-vocab* has already been created in the anki ui. See the [Anki documentation for adding a note type](https://docs.ankiweb.net/editing.html#adding-a-note-type) to learn how this is done.
+> Note that this pipeline was created with the *lang-vocab* model rather than *basic*. That means we are assuming that a model called *lang-vocab* has already been created in the anki ui. See the [Anki documentation for adding a note type](https://docs.ankiweb.net/editing.html#adding-a-note-type) to learn how this is done.
 
 
 ### Attaching media
@@ -304,7 +307,7 @@ DICTIONARY = {
     # ...
 }
 
-hanky = HankyPipeline()
+hanky = HankyPipeline("basic")
 
 
 def random_word_cards(n):
@@ -313,7 +316,7 @@ def random_word_cards(n):
 
 
 # add 20 cards straight from the generator, with no file involved
-report = hanky.import_from_source(random_word_cards(20), "basic", "english::vocab")
+report = hanky.import_from_source(random_word_cards(20), "english::vocab")
 print(f"Added {report.added}, skipped {report.skipped}, failed {report.failed}.")
 ```
 
@@ -349,15 +352,20 @@ from simplest to most involved. Install their dependencies with
 Both the `hanky` command and your own scripts share the same interface:
 
 ```
-[hanky | python3 my_script.py] <operation> <file|dir> [pattern] --model MODEL [options]
+[hanky | python3 my_script.py] <operation> <file|dir> [pattern] [options]
 ```
+
+Cards are created with the model set on the pipeline (`HankyPipeline("basic")`);
+pass `-m/--model` to override it for a single run. The standalone `hanky`
+command has no script of its own, so it uses Anki's built-in `Basic` model
+unless you override it.
 
 **`pipe`** — pipe cards from a single file into a deck:
 
 ```
-hanky pipe [-h] -m MODEL [--into DECK] [--fail-fast] [--args K=V ...] file
+hanky pipe [-h] [-m MODEL] [--into DECK] [--fail-fast] [--args K=V ...] file
   file          File to load from (.csv, .json, or a registered extension).
-  -m, --model   Anki model/note-type name to create cards with. Required.
+  -m, --model   Override the Anki model/note-type name to create cards with.
   --into        Destination deck. Defaults to the filename without extension.
   --fail-fast   Stop and raise on the first card that can't be added, instead
                 of skipping it and reporting it at the end.
@@ -367,10 +375,10 @@ hanky pipe [-h] -m MODEL [--into DECK] [--fail-fast] [--args K=V ...] file
 **`pipe-dir`** — pipe many files from a directory, deriving deck names from paths:
 
 ```
-hanky pipe-dir [-h] -m MODEL [-r] [--fail-fast] [--args K=V ...] dir pattern
+hanky pipe-dir [-h] [-m MODEL] [-r] [--fail-fast] [--args K=V ...] dir pattern
   dir              Directory to load from.
   pattern          Glob selecting files, e.g. "*.csv".
-  -m, --model      Anki model/note-type name to create cards with. Required.
+  -m, --model      Override the Anki model/note-type name to create cards with.
   -r, --recursive  Also descend into sub-directories.
   --fail-fast      Stop and raise on the first card that can't be added, instead
                    of skipping it and reporting it at the end.
@@ -381,7 +389,7 @@ For example, to load every CSV under `french/` while building deck names from
 the folder structure:
 
 ```sh
-hanky pipe-dir "french/" "*.csv" --model basic -r
+hanky pipe-dir "french/" "*.csv" -r
 ```
 
 ```

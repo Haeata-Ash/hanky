@@ -6,7 +6,8 @@ from hanky.errors import HankyError
 
 def main():
     try:
-        hanky = HankyPipeline()
+        # default to basic model
+        hanky = HankyPipeline("basic")
         hanky.run()
     except HankyError as e:
         print(f"error: {e}", file=sys.stderr)

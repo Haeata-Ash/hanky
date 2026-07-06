@@ -44,11 +44,11 @@ def define(word: str) -> str:
     return f"({pos}) {primary.definition()}"
 
 
-# instantiate the hanky app
-hanky = HankyPipeline()
+# instantiate the hanky app, creating cards with the "basic" model
+hanky = HankyPipeline("basic")
 
 
-@hanky.card_processor("basic", expected_args=[], card_fields=["Front"])
+@hanky.card_processor(expected_args=[], card_fields=["Front"])
 def define_word(card: dict):
     """Set the back of each card to the definition of the word on the front"""
     card["Back"] = define(card["Front"])
@@ -56,5 +56,5 @@ def define_word(card: dict):
 
 
 # run the hanky cli application by running this python file, for example:
-#   python3 demo_define.py pipe words.csv --model basic --into english::vocab
+#   python3 demo_define.py pipe words.csv --into english::vocab
 hanky.run()

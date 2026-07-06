@@ -30,7 +30,7 @@ class CardProcessingException(Exception):
         )
 
 
-class ModelProcessor:
+class CardProcessor:
     """The wrapper for user defined functions which processes cards.
 
     Wraps a python callable which takes a dictionary representing an anki card,
@@ -49,7 +49,7 @@ class ModelProcessor:
         expected_args: List[str],
         card_fields: List[str],
     ):
-        """Initializes a model processor
+        """Initializes a card processor
 
         Args:
             func: the user defined callable which processes each card

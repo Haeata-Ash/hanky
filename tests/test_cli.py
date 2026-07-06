@@ -1,7 +1,5 @@
 from pathlib import Path
 
-import pytest
-
 from hanky.cli import make_parser
 from hanky.hanky import _run_app
 
@@ -29,9 +27,9 @@ def test_pipe_into_is_optional():
     assert ns.deck is None
 
 
-def test_pipe_requires_a_model():
-    with pytest.raises(SystemExit):
-        make_parser().parse_args(["pipe", "words.csv"])
+def test_pipe_model_override_is_optional():
+    ns = make_parser().parse_args(["pipe", "words.csv"])
+    assert ns.model is None
 
 
 def test_pipe_dir_takes_positional_dir_and_pattern():
@@ -45,9 +43,9 @@ def test_pipe_dir_takes_positional_dir_and_pattern():
     assert ns.is_rec is True
 
 
-def test_pipe_dir_requires_a_model():
-    with pytest.raises(SystemExit):
-        make_parser().parse_args(["pipe-dir", "./french", "*.csv"])
+def test_pipe_dir_model_override_is_optional():
+    ns = make_parser().parse_args(["pipe-dir", "./french", "*.csv"])
+    assert ns.model is None
 
 
 def test_pipe_defaults_the_deck_to_the_filename(app, tmp_path):

@@ -18,7 +18,7 @@ two card processors:
      translation, attaching the audio as anki media.
 
 Run, e.g.:
-    python3 demo_scrape.py pipe words.xlsx --model lang-vocab
+    python3 demo_scrape.py pipe words.xlsx
 """
 
 
@@ -100,8 +100,8 @@ def generate_neural_speech(utf_8_str: str, voice: str) -> bytes:
     return res["AudioStream"].read()
 
 
-# instantiate the hanky app
-hanky = HankyPipeline()
+# instantiate the hanky app, creating cards with the "lang-vocab" model
+hanky = HankyPipeline("lang-vocab")
 
 
 def excel_loader(f_obj: IO):
@@ -121,7 +121,7 @@ def excel_loader(f_obj: IO):
 hanky.register_loader(".xlsx", excel_loader, is_text=False)
 
 
-@hanky.card_processor("lang-vocab", expected_args=[], card_fields=["word"])
+@hanky.card_processor(expected_args=[], card_fields=["word"])
 def scrape_translation(card: dict):
     """Get the English 'word' translation and example sentene from WordReference
     and write them to the 'translation' and 'example' fields on the card."""
@@ -133,7 +133,7 @@ def scrape_translation(card: dict):
     return card
 
 
-@hanky.card_processor("lang-vocab", expected_args=[], card_fields=["translation"])
+@hanky.card_processor(expected_args=[], card_fields=["translation"])
 def add_audio(card: dict):
     """Generate French speech for the 'translation' field and reference the
     resulting anki media in 'translation-audio'."""
@@ -146,5 +146,5 @@ def add_audio(card: dict):
 
 
 # run the hanky cli application by running this python file, for example:
-#   python3 demo_scrape.py pipe words.xlsx --model lang-vocab
+#   python3 demo_scrape.py pipe words.xlsx
 hanky.run()
