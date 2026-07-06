@@ -1,4 +1,3 @@
-import warnings
 from contextlib import contextmanager
 from pathlib import Path
 from typing import (
@@ -16,7 +15,7 @@ from anki.collection import Collection
 
 from hanky.anki_utils import add_card, add_deck, add_media, backup_collection
 from hanky.processors import CardProcessingException, ModelProcessor
-from hanky.cli import DEPRECATED_OPERATIONS, _warn_deprecated_operation, make_parser
+from hanky.cli import make_parser
 from hanky.config import Config
 from hanky.errors import (
     CollectionInUseError,
@@ -457,36 +456,6 @@ class HankyPipeline:
 
         return report
 
-    def load_cards(self, *args, **kwargs) -> LoadReport:
-        """Deprecated alias for :meth:`import_from_source`.
-
-        .. deprecated:: 0.2.0
-            Renamed to :meth:`import_from_source`; this alias will be
-            removed in 0.3.0.
-        """
-        _warn_renamed("load_cards", "import_from_source")
-        return self.import_from_source(*args, **kwargs)
-
-    def load_deck(self, *args, **kwargs) -> LoadReport:
-        """Deprecated alias for :meth:`import_from_file`.
-
-        .. deprecated:: 0.2.0
-            Renamed to :meth:`import_from_file`; this alias will be
-            removed in 0.3.0.
-        """
-        _warn_renamed("load_deck", "import_from_file")
-        return self.import_from_file(*args, **kwargs)
-
-    def load_dir(self, *args, **kwargs) -> LoadReport:
-        """Deprecated alias for :meth:`import_from_dir`.
-
-        .. deprecated:: 0.2.0
-            Renamed to :meth:`import_from_dir`; this alias will be
-            removed in 0.3.0.
-        """
-        _warn_renamed("load_dir", "import_from_dir")
-        return self.import_from_dir(*args, **kwargs)
-
     def run(self) -> None:
         """Run the HankyPipeline object as a CLI application. This method
         performs a backup of the current anki collection.
@@ -496,34 +465,6 @@ class HankyPipeline:
             backup_collection(col, self.config.BACKUP_FOLDER)
 
         _run_app(self)
-
-
-class Hanky(HankyPipeline):
-    """Deprecated alias for :class:`HankyPipeline`.
-
-    .. deprecated:: 0.2.0
-        Renamed to :class:`HankyPipeline`; this alias will be removed in
-        0.3.0.
-    """
-
-    def __init__(self, *args, **kwargs):
-        warnings.warn(
-            "Hanky has been renamed to HankyPipeline. The 'Hanky' name is "
-            "deprecated and will be removed in 0.3.0.",
-            DeprecationWarning,
-            stacklevel=2,
-        )
-        super().__init__(*args, **kwargs)
-
-
-def _warn_renamed(old: str, new: str) -> None:
-    """Emit a deprecation warning for a renamed method."""
-    warnings.warn(
-        f"{old}() has been renamed to {new}(). The '{old}' name is "
-        f"deprecated and will be removed in 0.3.0.",
-        DeprecationWarning,
-        stacklevel=3,
-    )
 
 
 def _run_app(app: HankyPipeline, args: Optional[Sequence[str]] = None):
@@ -547,11 +488,8 @@ def _run_app(app: HankyPipeline, args: Optional[Sequence[str]] = None):
     except AttributeError:
         pass
 
-    if parsed_args.operation in DEPRECATED_OPERATIONS:
-        _warn_deprecated_operation(parsed_args.operation)
-
     report = LoadReport()
-    if parsed_args.operation in ("pipe", "load"):
+    if parsed_args.operation == "pipe":
         print(f"Loading into deck {parsed_args.deck} from file {parsed_args.file}")
         report = app.import_from_file(
             parsed_args.file,
@@ -561,7 +499,7 @@ def _run_app(app: HankyPipeline, args: Optional[Sequence[str]] = None):
             **model_args,
         )
 
-    elif parsed_args.operation in ("pipe-dir", "load-dir"):
+    elif parsed_args.operation == "pipe-dir":
         print(f"Loading from dirrectory {parsed_args.dir}")
         report = app.import_from_dir(
             parsed_args.model,
