@@ -1,9 +1,0 @@
-hanky
-pandas
-openpyxl
-boto3
-beautifulsoup4
-nltk
-requests
-anthropic
-pydantic

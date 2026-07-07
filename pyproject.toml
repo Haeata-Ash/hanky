@@ -16,7 +16,7 @@ classifiers = [
 ]
 
 keywords = ["anki"]
-version = "0.3.0.dev3"
+version = "0.3.0.dev4"
 
 dependencies = [
   "anki",
@@ -33,20 +33,6 @@ Issues = "https://github.com/Haeata-Ash/hanky/issues"
 # Development dependencies, managed by uv (PEP 735 dependency groups).
 # Installed by default with `uv sync`.
 [dependency-groups]
-demos = [
-  "pandas",
-  "openpyxl",
-  "boto3",
-  "beautifulsoup4",
-  "requests",
-  "pytest",
-  "pytest-cov",
-  "mypy",
-  "ruff",
-  "types-psutil",
-  "pre-commit",
-  "nltk>=3.9.4",
-]
 dev = [
   "pytest",
   "pytest-cov",

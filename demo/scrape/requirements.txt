@@ -1,0 +1,6 @@
+hanky
+beautifulsoup4
+boto3
+pandas
+openpyxl
+requests

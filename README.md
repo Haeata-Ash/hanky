@@ -210,7 +210,7 @@ The two processors in our pipeline will be:
 2. `add_audio`: takes the `translation` and `example` from step 1 then produces French
    audio.
 
-Note that for brevity the `scrape_wordreference` and `generate_neural_speech` functions are not included. See the [full demo file](https://github.com/Haeata-Ash/hanky/blob/main/demo/demo_scrape.py) for the complete code.
+Note that for brevity the `scrape_wordreference` and `generate_neural_speech` functions are not included. See the [full demo file](https://github.com/Haeata-Ash/hanky/blob/main/demo/scrape/demo_scrape.py) for the complete code.
 
 ```python
 from hanky import CardMedia, HankyPipeline
@@ -322,23 +322,24 @@ print(f"Added {report.added}, skipped {report.skipped}, failed {report.failed}."
 ## Examples
 
 Complete, runnable scripts live in the [`demo/`](https://github.com/Haeata-Ash/hanky/tree/main/demo) directory, ordered here
-from simplest to most involved. Install their dependencies with
-`pip install -r demo/requirements.txt`.
+from simplest to most involved. Each demo lives in its own folder with a
+`requirements.txt` listing just its dependencies; install them with, e.g.,
+`pip install -r demo/scrape/requirements.txt`.
 
-- [`demo_lowercase.py`](https://github.com/Haeata-Ash/hanky/blob/main/demo/demo_lowercase.py) — The minimal example: a single,
+- [`demo_lowercase.py`](https://github.com/Haeata-Ash/hanky/blob/main/demo/lowercase/demo_lowercase.py) — The minimal example: a single,
   dependency-free processor that lower-cases every field on a card.
-- [`demo_random_words.py`](https://github.com/Haeata-Ash/hanky/blob/main/demo/demo_random_words.py) — A non-file source: builds
+- [`demo_random_words.py`](https://github.com/Haeata-Ash/hanky/blob/main/demo/random_words/demo_random_words.py) — A non-file source: builds
   cards from an in-script word list and adds them with `import_from_source`.
-- [`demo_define.py`](https://github.com/Haeata-Ash/hanky/blob/main/demo/demo_define.py) — A single processor that fills the
+- [`demo_define.py`](https://github.com/Haeata-Ash/hanky/blob/main/demo/define/demo_define.py) — A single processor that fills the
   back of each card with a dictionary definition of the word on its front,
   looked up offline via WordNet (NLTK).
-- [`demo_audio.py`](https://github.com/Haeata-Ash/hanky/blob/main/demo/demo_audio.py) — Registers a custom `.xlsx` loader and uses AWS
+- [`demo_audio.py`](https://github.com/Haeata-Ash/hanky/blob/main/demo/audio/demo_audio.py) — Registers a custom `.xlsx` loader and uses AWS
   Polly to attach text-to-speech audio, choosing the language from a CLI
   argument (`--args lang=french`).
-- [`demo_scrape.py`](https://github.com/Haeata-Ash/hanky/blob/main/demo/demo_scrape.py) — A two-stage English→French pipeline
+- [`demo_scrape.py`](https://github.com/Haeata-Ash/hanky/blob/main/demo/scrape/demo_scrape.py) — A two-stage English→French pipeline
   that scrapes a translation and example sentence from WordReference, then
   voices the translation with AWS Polly.
-- [`demo_example_sentences.py`](https://github.com/Haeata-Ash/hanky/blob/main/demo/demo_example_sentences.py) — A three-stage
+- [`demo_example_sentences.py`](https://github.com/Haeata-Ash/hanky/blob/main/demo/example_sentences/demo_example_sentences.py) — A three-stage
   English→French pipeline that scrapes a translation from WordReference, asks
   Claude for an example sentence at a given CEFR level, then adds French audio
   for both the word and the sentence with AWS Polly.

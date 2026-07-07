@@ -53,6 +53,6 @@ hanky = HankyPipeline("basic")
 # from the generator above without ever touching a file.
 
 if __name__ == "__main__":
-    report = hanky.import_from_source(random_word_cards(20), "english::vocab")
+    report = hanky.import_from_source(random_word_cards(5), "english::vocab")
 
     print(f"Added {report.added}, skipped {report.skipped}, failed {report.failed}.")

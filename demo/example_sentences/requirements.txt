@@ -1,0 +1,6 @@
+hanky
+anthropic
+beautifulsoup4
+boto3
+pydantic
+requests
