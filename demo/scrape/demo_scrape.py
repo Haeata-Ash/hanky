@@ -15,14 +15,13 @@ Run, e.g.:
 
 import re
 import sys
-from typing import IO, NamedTuple
+from typing import NamedTuple
 
 import boto3
-import pandas
 import requests
 from bs4 import BeautifulSoup
 
-from hanky import CardMedia, HankyPipeline, Config
+from hanky import CardMedia, HankyPipeline
 
 
 # WordReference language-pair path (English to French)
@@ -191,25 +190,7 @@ def generate_neural_speech(utf_8_str: str, voice: str) -> bytes:
 # instantiate the hanky app, creating cards with the "lang-vocab" model
 hanky = HankyPipeline(
     "lang-vocab",
-    config=Config(ANKI_DB_PATH="~/.local/share/Anki2/TestUser/collection.anki2"),
 )
-
-
-def excel_loader(f_obj: IO):
-    """Load card fields and values from an excel file.
-
-    Args:
-        f_obj: file object to read from.
-    Yields:
-        dictionary of fields mapped to their values.
-    """
-    df = pandas.read_excel(f_obj)
-    for _, row in df.iterrows():
-        yield row.to_dict()
-
-
-# register the loader against the ".xlsx" extension
-hanky.register_loader(".xlsx", excel_loader, is_text=False)
 
 
 @hanky.card_processor(expected_args=[], card_fields=["word"])
@@ -239,6 +220,6 @@ def add_audio(card: dict):
 
 
 # run the hanky cli application by running this python file, for example:
-#   python3 demo_scrape.py pipe words.xlsx
+#   python3 demo_scrape.py pipe words.csv
 if __name__ == "__main__":
     hanky.run()
