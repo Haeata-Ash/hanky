@@ -4,7 +4,8 @@
 two card processors:
 
   1. ``scrape_translation`` scrapes https://www.wordreference.com/ to fill in a
-     translation and an example sentence given an English word.
+     translation and an example sentence given an English word. When a word has
+     several candidate translations you are prompted to pick one.
   2. ``add_audio`` uses AWS Polly (text to speech) to voice the scraped
      translation, attaching the audio as anki media.
 
@@ -12,14 +13,16 @@ Run, e.g.:
     python3 demo_scrape.py pipe words.xlsx
 """
 
-from typing import IO
+import re
+import sys
+from typing import IO, NamedTuple
 
 import boto3
 import pandas
 import requests
 from bs4 import BeautifulSoup
 
-from hanky import CardMedia, HankyPipeline
+from hanky import CardMedia, HankyPipeline, Config
 
 
 # WordReference language-pair path (English to French)
@@ -31,15 +34,37 @@ VOICE = "Lea"
 
 # WordReference returns an empty body to clients without a browser-like UA.
 _HEADERS = {
-    "User-Agent": (
-        "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 "
-        "(KHTML, like Gecko) Chrome/120 Safari/537.36"
-    )
+    "User-Agent": "Mozilla/5.0 (X11; Linux x86_64; rv:152.0) Gecko/20100101 Firefox/152.0",
+    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+    "Accept-Language": "en-US,en;q=0.9",
+    "Accept-Encoding": "gzip",
+    "Referer": "https://www.wordreference.com/",
+    "Connection": "keep-alive",
+    "Cookie": "WRFavDicts=enfr|fren; nginx_wr_human=1; llang=enfri",
+    "Upgrade-Insecure-Requests": "1",
+    "Sec-Fetch-Dest": "document",
+    "Sec-Fetch-Mode": "navigate",
+    "Sec-Fetch-Site": "same-origin",
+    "DNT": "1",
+    "Sec-GPC": "1",
+    "Priority": "u=0, i",
+    "Pragma": "no-cache",
+    "Cache-Control": "no-cache",
 }
 
 
-def scrape_wordreference(word: str, lang_pair: str) -> tuple[str, str]:
-    """Scrape a translation and example sentence for ``word`` from WordReference.
+class Translation(NamedTuple):
+    """One candidate translation scraped from a WordReference entry."""
+
+    word: str  # the target-language translation, e.g. "bavarder"
+    pos: str  # part-of-speech marker, e.g. "vi"
+    sense: str  # sense of the source word being translated, e.g. "(talk lightly)"
+    note: str  # usage/register note, e.g. "(familier)"
+    example: str  # target-language example sentence; may be empty
+
+
+def scrape_wordreference(word: str, lang_pair: str) -> list[Translation]:
+    """Scrape all candidate translations for ``word`` from WordReference.
 
     Note: WordReference is a third-party site. The page could change and request volumes
     should be kept low.
@@ -49,41 +74,104 @@ def scrape_wordreference(word: str, lang_pair: str) -> tuple[str, str]:
         lang_pair: WordReference language-pair path, e.g. ``"enfr"``.
 
     Returns:
-        A ``(translation, example)`` tuple. ``example`` may be an empty string
-        if the entry has no target-language example sentence.
+        Candidate :class:`Translation` s in page order (most common senses first).
 
     Raises:
         ValueError: no translation could be found for the word.
     """
     url = f"https://www.wordreference.com/{lang_pair}/{word}"
-    resp = requests.get(url, headers=_HEADERS, timeout=10)
-    resp.raise_for_status()
+    with requests.Session() as sess:
+        resp = sess.get(url, headers=_HEADERS, timeout=10)
+        resp.raise_for_status()
 
     soup = BeautifulSoup(resp.text, "html.parser")
     table = soup.find(id="articleWRD")
     if table is None:
         raise ValueError(f"No translation table found for '{word}' at {url}.")
 
-    # The first data row (class 'odd'/'even') with a non-empty 'ToWrd' cell holds
-    # the primary translation. The leading text node is the word itself; the
-    # nested <em> is the part-of-speech marker (e.g. 'nm'), which we drop.
-    translation = ""
+    # Data rows have class 'odd'/'even' and are grouped into senses: a row with an
+    # 'id' attribute starts a new sense. Each 'ToWrd' cell is one candidate translation
+    # and 'ToEx' cells hold the sense's example sentences.
+    candidates: list[Translation] = []
+    sense = ""
+    examples: list[str] = []  # 'ToEx' sentences of the sense being parsed
+    sense_start = 0  # index into candidates of the current sense's first candidate
+
+    def attach_examples() -> None:
+        """Give each of the finished sense's candidates its best example: the first
+        sentence using the translation, falling back to the sense's first example."""
+        for i, cand in enumerate(candidates[sense_start:], sense_start):
+            head = cand.word.split(",")[0].split()[0].lower()
+            matching = (ex for ex in examples if head in ex.lower())
+            example = next(matching, examples[0] if examples else "")
+            candidates[i] = cand._replace(example=example)
+
+    # The markup leaves <tr> tags unclosed, so rows nest into
+    # each other when parsed.
+    # Taking only each row's direct <td> children avoids double-counting
+    # cells from nested rows.
     for row in table.find_all("tr", class_=["odd", "even"]):
-        to_word = row.find("td", class_="ToWrd")
-        if to_word and to_word.get_text(strip=True):
-            head = to_word.find(string=True)
-            translation = head.strip() if head else ""
-            if translation:
-                break
+        if row.get("id"):
+            attach_examples()
+            sense_start, sense, examples = len(candidates), "", []
+        note = ""
+        for cell in row.find_all("td", recursive=False):
+            classes = cell.get("class") or []
+            if "ToWrd" in classes:
+                # The nested <em> is the part-of-speech marker; the rest is the
+                # translation itself, with '⇒' link arrows sprinkled through it.
+                pos_tag = cell.find("em")
+                pos = pos_tag.get_text(strip=True) if pos_tag else ""
+                if pos_tag:
+                    pos_tag.extract()
+                text = cell.get_text(" ", strip=True).replace("⇒", "")
+                text = re.sub(r"\s*,[\s,]*", ", ", re.sub(r"\s+", " ", text)).strip(
+                    " ,"
+                )
+                if text:
+                    candidates.append(Translation(text, pos, sense, note, ""))
+                note = ""
+            elif "ToEx" in classes:
+                if example := cell.get_text(" ", strip=True):
+                    examples.append(example)
+            elif not classes:
+                # Unclassed cells hold prose: the sense gloss on a sense's first row,
+                # register notes elsewhere.
+                if (text := cell.get_text(" ", strip=True)) and not cell.find("a"):
+                    if not sense and row.get("id"):
+                        sense = text
+                    else:
+                        note = text
+    attach_examples()
 
-    if not translation:
+    if not candidates:
         raise ValueError(f"Could not find a translation for '{word}' at {url}.")
+    return candidates
 
-    # First target-language example sentence anywhere in the table, if present.
-    example_cell = table.find("td", class_="ToEx")
-    example = example_cell.get_text(" ", strip=True) if example_cell else ""
 
-    return translation, example
+def choose_translation(word: str, translations: list[Translation]) -> Translation:
+    """Ask the user to pick one of ``translations`` for ``word`` on the terminal.
+
+    Falls back to the first (most common) translation when there is only one or
+    when stdin is not interactive.
+    """
+    if len(translations) == 1 or not sys.stdin.isatty():
+        return translations[0]
+
+    print(f"\nTranslations for '{word}':")
+    for i, t in enumerate(translations, 1):
+        detail = " ".join(
+            part for part in (f"[{t.pos}]" if t.pos else "", t.sense, t.note) if part
+        )
+        print(f"  {i:2}. {t.word}" + (f"  {detail}" if detail else ""))
+
+    while True:
+        choice = input(f"Select a translation for '{word}' [1]: ").strip()
+        if not choice:
+            return translations[0]
+        if choice.isdigit() and 1 <= int(choice) <= len(translations):
+            return translations[int(choice) - 1]
+        print(f"Please enter a number between 1 and {len(translations)}.")
 
 
 def generate_neural_speech(utf_8_str: str, voice: str) -> bytes:
@@ -101,7 +189,10 @@ def generate_neural_speech(utf_8_str: str, voice: str) -> bytes:
 
 
 # instantiate the hanky app, creating cards with the "lang-vocab" model
-hanky = HankyPipeline("lang-vocab")
+hanky = HankyPipeline(
+    "lang-vocab",
+    config=Config(ANKI_DB_PATH="~/.local/share/Anki2/TestUser/collection.anki2"),
+)
 
 
 def excel_loader(f_obj: IO):
@@ -123,13 +214,15 @@ hanky.register_loader(".xlsx", excel_loader, is_text=False)
 
 @hanky.card_processor(expected_args=[], card_fields=["word"])
 def scrape_translation(card: dict):
-    """Get the English 'word' translation and example sentence from WordReference
-    and write them to the 'translation' and 'example' fields on the card."""
+    """Get the English 'word' translations from WordReference, let the user pick
+    one, and write it and its example sentence to the 'translation' and 'example'
+    fields on the card."""
 
-    translation, example = scrape_wordreference(card["word"], WR_PAIR)
+    translations = scrape_wordreference(card["word"], WR_PAIR)
+    chosen = choose_translation(card["word"], translations)
 
-    card["translation"] = translation
-    card["example"] = example
+    card["translation"] = chosen.word
+    card["example"] = chosen.example
     return card
 
 
