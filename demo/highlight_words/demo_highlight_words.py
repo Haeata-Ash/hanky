@@ -2,10 +2,11 @@
 
 """Example hanky script which turns a photo of a printed French page into
 French→English flash cards: each word or phrase marked with a highlighter pen
-becomes a card with its context, translation, and canonical form (lemma) if
-it exists (i.e is a word and not a phrase)
+becomes a card with the sentence it appeared in as context, English
+translations of both, and the word's dictionary form (lemma) when spaCy can
+find one.
 
-Requires the a card model/type called ``lang-vocab-ocr`` has been created
+Requires that a card model/type called ``lang-vocab-ocr`` has been created
 with the fields:
 - word
 - context
@@ -39,23 +40,25 @@ Back of card:
 {{ context }}
 ```
 
-Everything is done on device and any models used are lightweight and runnable on
-the cpu.
+The image processing, OCR, and lemmatisation all run on device with
+lightweight CPU models; only the translation step calls out to a cloud
+service (the Google Cloud Translation API).
 
 The pipeline:
 
-  The loader (stages 1-4):
-    1. Load the photo, flatten uneven lighting, and straighten the page.
-    2. Build a mask of the highlighter ink by colour.
-    3. OCR the whole page into plain text, in reading order, tracking which
-       characters sit on the mask.
-    4. Tidy each highlighted fragment with spaCy, keep its surrounding
-       sentence as context, and let the user drop any mis-detections.
+  The loader (stages 1-4), registered for .jpg/.jpeg/.png files:
+    1. Load the photo and preprocess it so the OCR can read the text
+       accurately.
+    2. Build a mask of where the highlighter ink is.
+    3. OCR the page and keep the words that sit on highlighted areas.
+    4. Pair each highlighted word or phrase with the sentence it appeared
+       in, which becomes the card's context.
   The card processors:
-    5. ``lemmatise`` — the dictionary form of a highlighted word, so the card
-       shows something you can look up ("cachait" → "cacher").
-    6. ``translate`` — a translation of the word from the Google Cloud
-       Translation API.
+    5. ``lemmatise`` — write the dictionary form of the highlighted word to
+       the "lemma" field, so the card shows something you can look up
+       ("cachait" → "cacher"). Left empty when no lemma is found.
+    6. ``translate`` — translate the word and its context sentence to
+       English with the Google Cloud Translation API.
 
 Requires the French spaCy model, and Google Cloud credentials for a project
 with the Cloud Translation API enabled (its free tier covers 500,000
@@ -69,7 +72,7 @@ Handwriting won't work (unless you are incredibly neat), the OCR model reads
 printed text.
 
 Run, e.g.:
-    python3 demo_highlight_words.py pipe notes.jpg
+    python3 demo_highlight_words.py pipe emile_zola.jpg --into french::vocab
 """
 
 import functools

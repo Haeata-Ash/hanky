@@ -12,6 +12,10 @@ For example, a single hanky pipeline might take english words and:
 
 turning a list of words into rich flash cards with native speech and examples.
 
+Checkout the [computer vision pipeline demo](https://github.com/Haeata-Ash/hanky/blob/main/demo/highlight_words/demo_highlight_words.py) for a more involved example which loads a photograph of printed French text that you have 
+marked with a highlighter pen, and turns every highlighted word or phrase into a flash card with the sentence it appeared in as context.
+
+
 *Hanky is not affiliated or associated with the [Anki application/org](https://apps.ankiweb.net/).*
 
 ## Table of Contents
@@ -344,12 +348,9 @@ from simplest to most involved. Each demo lives in its own folder with a
   Claude for an example sentence at a given CEFR level, then adds French audio
   for both the word and the sentence with AWS Polly.
 - [`demo_highlight_words.py`](https://github.com/Haeata-Ash/hanky/blob/main/demo/highlight_words/demo_highlight_words.py) — A
-  computer-vision loader: photograph a printed French page you've marked with
-  a highlighter pen and every highlighted word or phrase becomes a card with
-  the sentence it appeared in as context, its dictionary form via spaCy
-  (`fr_core_news_sm`), and an English translation from the Google Cloud
-  Translation API. Highlighter ink is found with OpenCV colour segmentation
-  and read on-device with a small Latin-script OCR model.
+  computer-vision based pipeline which loads a photograph of printed French text you've marked with
+  a highlighter pen, and turns every highlighted word or phrase into a flash card with
+  the sentence it appeared in as context. 
 
 ## CLI Reference
 
