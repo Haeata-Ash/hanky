@@ -336,7 +336,7 @@ wheels = [
 
 [[package]]
 name = "hanky"
-version = "0.3.0.dev5"
+version = "0.3.0.dev6"
 source = { editable = "." }
 dependencies = [
     { name = "anki" },
