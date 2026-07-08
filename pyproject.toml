@@ -16,7 +16,7 @@ classifiers = [
 ]
 
 keywords = ["anki"]
-version = "0.3.0.dev4"
+version = "0.3.0.dev5"
 
 dependencies = [
   "anki",
