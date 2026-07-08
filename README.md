@@ -343,6 +343,13 @@ from simplest to most involved. Each demo lives in its own folder with a
   English→French pipeline that scrapes a translation from WordReference, asks
   Claude for an example sentence at a given CEFR level, then adds French audio
   for both the word and the sentence with AWS Polly.
+- [`demo_highlight_words.py`](https://github.com/Haeata-Ash/hanky/blob/main/demo/highlight_words/demo_highlight_words.py) — A
+  computer-vision loader: photograph a printed French page you've marked with
+  a highlighter pen and every highlighted word or phrase becomes a card with
+  the sentence it appeared in as context, its dictionary form via spaCy
+  (`fr_core_news_sm`), and an English translation from the Google Cloud
+  Translation API. Highlighter ink is found with OpenCV colour segmentation
+  and read on-device with a small Latin-script OCR model.
 
 ## CLI Reference
 
@@ -407,7 +414,7 @@ you'd like to change. Please make sure tests pass (`uv run pytest`) before submi
 ## Development
 
 ```sh
-uv sync                    # install dependencies (incl. dev + demo groups)
+uv sync                    # install dependencies (incl. dev group)
 uv run pytest              # run tests (CI runs Python 3.11, 3.12, 3.13)
 uv run ruff format .       # format
 uv run ruff check .        # lint

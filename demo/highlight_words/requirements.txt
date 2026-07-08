@@ -1,0 +1,11 @@
+hanky
+google-cloud-translate
+numpy
+onnxruntime
+opencv-python-headless
+pillow
+rapidocr
+spacy
+matplotlib
+pyqt6
+# plus the French spaCy model: python -m spacy download fr_core_news_sm
