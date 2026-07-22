@@ -59,7 +59,7 @@ from hanky import HankyPipeline
 hanky = HankyPipeline("basic")
 
 
-@hanky.card_processor(expected_args=[], card_fields=[])
+@hanky.card_processor(expected_args=[], required_fields=[])
 def lowercase_card(card: dict):
     """Lower-case the text on every field of the card."""
     return {field: value.lower() for field, value in card.items()}
@@ -161,7 +161,7 @@ Multiple processors can be registered on a `HankyPipeline` app to create a pipel
 A processor is registered with two things:
 
 ```python
-@hanky.card_processor(expected_args=[...], card_fields=[...])
+@hanky.card_processor(expected_args=[...], required_fields=[...])
 def my_processor(card: dict, **expected_args):
     ...
 ```
@@ -169,13 +169,13 @@ def my_processor(card: dict, **expected_args):
 | Part | Meaning |
 | --- | --- |
 | `expected_args` | Names of CLI arguments the processor needs. They are passed in from the command line via `--args key=value` and arrive as keyword arguments. For example, you might have the same pipeline for different languages, so you would pass in `lang=german` or `lang=french`|
-| `card_fields` | Fields that **must already be present** on the card when this processor runs. Hanky checks this and raises a clear error if one is missing. It lets a processor declare what an *earlier* step must have produced. |
+| `required_fields` | Fields that **must already be present** on the card when this processor runs. Hanky checks this and raises a clear error if one is missing. It lets a processor declare what an *earlier* step must have produced. |
 
 When hanky calls your processors, the first argument is always the `card`; a plain `dict` representing a a cards fields. Any declared `expected_args` are then passed in as key word arguments. So if you declared
 
 
 ```python
-@hanky.card_processor(expected_args=["lang"], card_fields=[...])
+@hanky.card_processor(expected_args=["lang"], required_fields=[...])
 def my_processor(card: dict, lang):
     ...
 ```
@@ -232,7 +232,7 @@ def generate_neural_speech(utf_8_str: str, voice: str) -> bytes:
 hanky = HankyPipeline("lang-vocab")
 
 # Stage 1: requires `word` (this comes straight from the csv), produces `translation` + `example`.
-@hanky.card_processor(expected_args=[], card_fields=["word"])
+@hanky.card_processor(expected_args=[], required_fields=["word"])
 def scrape_translation(card: dict):
     translation, example = scrape_wordreference(card["word"], "enfr")
     card["translation"] = translation
@@ -240,7 +240,7 @@ def scrape_translation(card: dict):
     return card
 
 # Stage 2: requires `translation` (from stage 1), attaches audio media.
-@hanky.card_processor(expected_args=[], card_fields=["translation"])
+@hanky.card_processor(expected_args=[], required_fields=["translation"])
 def add_audio(card: dict):
     speech = generate_neural_speech(card["translation"], voice="Lea")
     audio = CardMedia(speech, ".mp3")
