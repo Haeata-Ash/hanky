@@ -1,6 +1,6 @@
 from .hanky import HankyPipeline as HankyPipeline
 from .media import CardMedia as CardMedia
-from .report import CardError as CardError
+from .report import CardRecord as CardRecord
 from .report import LoadReport as LoadReport
 from .config import Config as Config
 from .errors import HankyError as HankyError
