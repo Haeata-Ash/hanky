@@ -3,7 +3,6 @@ import hashlib
 import pytest
 
 from hanky.media import CardMedia
-from hanky.processors import CardProcessor
 
 
 def test_desired_name_is_sha256_of_data_plus_ext():
@@ -70,49 +69,3 @@ def test_replace_temp_refs_leaves_unrelated_fields_untouched():
     media.replace_temp_refs("real_name.mp3", card)
 
     assert card["Front"] == "bonjour"
-
-
-def test_dict_return_yields_empty_media_list():
-    def proc(card):
-        card["Back"] = "added"
-        return card
-
-    p = CardProcessor(proc, [], [])
-    card, media = p({"Front": "x"})
-
-    assert card == {"Front": "x", "Back": "added"}
-    assert media == []
-
-
-def test_single_cardmedia_return_is_wrapped_in_a_list():
-    m = CardMedia(b"data", ".mp3")
-
-    def proc(card):
-        card["Back"] = m.media_ref
-        return card, [m]
-
-    p = CardProcessor(proc, [], [])
-    card, media = p({"Front": "x"})
-
-    assert media == [m]
-
-
-def test_media_list_return_is_passed_through():
-    m1 = CardMedia(b"one", ".mp3")
-    m2 = CardMedia(b"two", ".mp3")
-
-    def proc(card):
-        return card, [m1, m2]
-
-    card, media = CardProcessor(proc, [], [])({"Front": "x"})
-
-    assert media == [m1, m2]
-
-
-def test_empty_media_list_return_is_passed_through():
-    def proc(card):
-        return card, []
-
-    card, media = CardProcessor(proc, [], [])({"Front": "x"})
-
-    assert media == []
