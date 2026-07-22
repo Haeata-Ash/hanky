@@ -350,7 +350,7 @@ for extension in (".jpg", ".jpeg", ".png"):
     hanky.register_loader(extension, load_photo_words_and_contexts, is_text=False)
 
 
-@hanky.card_processor(expected_args=[], card_fields=["word", "context"])
+@hanky.card_processor(expected_args=[], required_fields=["word", "context"])
 def lemmatise(card: dict):
     """Take the word field, lemmatise it, and write the result to the "lemma" field
     so the card shows something you can look up: "cachait" → "cacher". Phrases get an
@@ -373,7 +373,7 @@ def lemmatise(card: dict):
     return card
 
 
-@hanky.card_processor(expected_args=[], card_fields=["word", "context"])
+@hanky.card_processor(expected_args=[], required_fields=["word", "context"])
 def translate(card: dict):
     """Write Google translations of the highlighted word and of its context
     sentence to 'word-translation' and 'context-translation' (the front of the

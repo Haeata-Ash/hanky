@@ -40,30 +40,30 @@ class CardProcessor:
     Attributes:
         f: the user defined callable which processes each card
         expected_args: Expected key word arguments of the callable
-        card_fields: Anki fields expected to be already present in any cards processed
+        required_fields: Anki fields expected to be already present in any cards processed
     """
 
     def __init__(
         self,
         func: Union[SimpleProcessor, SimpleMediaProcessor, ManyMediaProcessor],
         expected_args: List[str],
-        card_fields: List[str],
+        required_fields: List[str],
     ):
         """Initializes a card processor
 
         Args:
             func: the user defined callable which processes each card
             expected_args: Expected key word arguments of the callable
-            card_fields: Anki fields expected to be already present in any cards processed
+            required_fields: Anki fields expected to be already present in any cards processed
         """
 
         self.f = func
         self.expected_args = expected_args
-        self.card_fields = card_fields
+        self.required_fields = required_fields
 
         if not isinstance(self.expected_args, list):
             raise TypeError("'expected_args' must be a list of strings")
-        if not isinstance(self.card_fields, list):
+        if not isinstance(self.required_fields, list):
             raise TypeError("'required_fields' must be a list of strings")
 
     def __call__(self, card: dict, **kwargs) -> Tuple[Dict[str, str], List[CardMedia]]:
@@ -78,7 +78,7 @@ class CardProcessor:
             card dictionary with possibly new fields added by user defined callable
 
         """
-        for k in self.card_fields:
+        for k in self.required_fields:
             if k not in card:
                 raise KeyError(
                     f"Processor requires '{k}' to be present in card. \n {str(card)}"
