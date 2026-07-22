@@ -1,3 +1,4 @@
+import inspect
 from typing import Any, Callable, List, Dict, Tuple, Union
 
 from hanky.media import CardMedia
@@ -7,6 +8,29 @@ from hanky.media import CardMedia
 SimpleProcessor = Callable[[Dict[str, Any]], Dict[str, str]]
 SimpleMediaProcessor = Callable[[Dict[str, Any]], Tuple[Dict[str, str], CardMedia]]
 ManyMediaProcessor = Callable[[Dict[str, Any]], Tuple[Dict[str, str], List[CardMedia]]]
+
+
+def _inspect_expected_args(func: Callable) -> Tuple[List[str], List[str]]:
+    """Derive the key word arguments a processor function expects from its
+    own signature, so callers don't have to declare them separately.
+
+    The first parameter is always the card, so it's skipped. Every named
+    parameter after it becomes an expected key word argument: one without
+    a default is required (hanky raises if it's missing from --args), one
+    with a default is optional (only forwarded if --args supplies it,
+    otherwise the function's own default applies).
+
+    Args:
+        func: the processor callable to inspect
+
+    Returns:
+        A ``(required, optional)`` tuple of key word argument names.
+    """
+    params = list(inspect.signature(func).parameters.values())[1:]
+    named = [p for p in params if p.kind in (p.POSITIONAL_OR_KEYWORD, p.KEYWORD_ONLY)]
+    required = [p.name for p in named if p.default is inspect.Parameter.empty]
+    optional = [p.name for p in named if p.default is not inspect.Parameter.empty]
+    return required, optional
 
 
 class CardProcessingException(Exception):
@@ -34,35 +58,37 @@ class CardProcessor:
     """The wrapper for user defined functions which processes cards.
 
     Wraps a python callable which takes a dictionary representing an anki card,
-    the key word arguments the callable expects and the fields (keys) it
-    assumes to be already present in the card.
+    plus any key word arguments it declares in its own signature (beyond the
+    card), and the fields (keys) it assumes to be already present in the card.
 
     Attributes:
         f: the user defined callable which processes each card
-        expected_args: Expected key word arguments of the callable
+        expected_args: required key word arguments of the callable, derived
+            from its signature (parameters with no default)
+        optional_args: optional key word arguments of the callable, derived
+            from its signature (parameters with a default)
         required_fields: Anki fields expected to be already present in any cards processed
     """
 
     def __init__(
         self,
         func: Union[SimpleProcessor, SimpleMediaProcessor, ManyMediaProcessor],
-        expected_args: List[str],
         required_fields: List[str],
     ):
         """Initializes a card processor
 
         Args:
-            func: the user defined callable which processes each card
-            expected_args: Expected key word arguments of the callable
+            func: the user defined callable which processes each card. Its
+                key word arguments (every parameter after the card) are
+                discovered automatically from its signature - see
+                :func:`_inspect_expected_args`.
             required_fields: Anki fields expected to be already present in any cards processed
         """
 
         self.f = func
-        self.expected_args = expected_args
+        self.expected_args, self.optional_args = _inspect_expected_args(func)
         self.required_fields = required_fields
 
-        if not isinstance(self.expected_args, list):
-            raise TypeError("'expected_args' must be a list of strings")
         if not isinstance(self.required_fields, list):
             raise TypeError("'required_fields' must be a list of strings")
 
@@ -91,9 +117,12 @@ class CardProcessor:
                     f"Processor '{name}' expects key word argument '{k}'. Ensure it is passed in via the --args option"
                 )
 
+        call_args = {k: kwargs[k] for k in self.expected_args}
+        call_args.update({k: kwargs[k] for k in self.optional_args if k in kwargs})
+
         # catch errors in processor and re throw indicating the name of the processor
         try:
-            ret = self.f(card, **{k: kwargs[k] for k in self.expected_args})
+            ret = self.f(card, **call_args)
         except Exception as e:
             raise CardProcessingException(self.f, card=card) from e
 
