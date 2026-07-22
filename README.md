@@ -424,21 +424,15 @@ uv run mypy src/hanky      # type check
 
 ## Publishing (For Me)
 
-1. Bump the version by either editing the *pyproject.toml* file or via `uv version --bump ...`.
-2. Build the distributions:
+If you are not me, please ignore.
+
+Versions come from git tags via hatch-vcs.
+
+1. Tag and push:
 
    ```sh
-   rm -rf dist && uv build
+   git tag -a 0.3.1 -m "hanky 0.3.1"
+   git push origin 0.3.1
    ```
 
-3. Publish (needs a PyPI API token in `UV_PUBLISH_TOKEN`):
-
-   ```sh
-   uv publish
-   ```
-
-4. Sanity check:
-
-   ```sh
-   uv run --with hanky --refresh-package hanky --no-project -- python -c "import hanky"
-   ```
+2. CI builds and publishes to PyPI automatically via trusted publishing.
