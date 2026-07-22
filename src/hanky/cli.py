@@ -6,6 +6,10 @@ class KeyValueArg(argparse.Action):
         setattr(namespace, self.dest, dict())
 
         for v in values:
+            if "=" not in v:
+                raise argparse.ArgumentError(
+                    self, f"expected key=value pairs, got '{v}' (missing '=')"
+                )
             key, value = v.split("=", 1)
             getattr(namespace, self.dest)[key] = value
 
