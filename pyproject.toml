@@ -22,6 +22,8 @@ dependencies = [
   "psutil",
 ]
 
+dynamic = ["version"]
+
 [project.scripts]
 hanky = "hanky.__main__:main"
 
