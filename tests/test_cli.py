@@ -1,5 +1,7 @@
 from pathlib import Path
 
+import pytest
+
 from hanky.cli import make_parser
 from hanky.hanky import _run_app
 
@@ -34,6 +36,21 @@ def test_pipe_into_is_optional():
 def test_pipe_model_override_is_optional():
     ns = make_parser().parse_args(["pipe", "words.csv"])
     assert ns.model is None
+
+
+def test_pipe_args_parses_key_value_pairs():
+    ns = make_parser(True).parse_args(
+        ["pipe", "words.csv", "--args", "lang=french", "voice=Lea"]
+    )
+    assert ns.args == {"lang": "french", "voice": "Lea"}
+
+
+def test_pipe_args_missing_equals_exits_cleanly(capsys):
+    with pytest.raises(SystemExit) as exc_info:
+        make_parser(True).parse_args(["pipe", "words.csv", "--args", "lang"])
+
+    assert exc_info.value.code == 2
+    assert "missing '='" in capsys.readouterr().err
 
 
 def test_pipe_dir_takes_positional_dir_and_pattern():
