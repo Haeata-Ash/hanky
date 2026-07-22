@@ -367,7 +367,7 @@ Since standalone `hanky` command has no script of its own, it uses Anki's built-
 **`pipe`** — pipe cards from a single file into a deck:
 
 ```
-hanky pipe [-h] [-m MODEL] [--into DECK] [--fail-fast] [--dry-run] [--args K=V ...] file
+hanky pipe [-h] [-m MODEL] [--into DECK] [--fail-fast] [--dry-run] [-v] [--args K=V ...] file
   file          File to load from (.csv, .json, or a registered extension).
   -m, --model   Override the Anki model/note-type name to create cards with.
   --into        Destination deck. Defaults to the filename without extension.
@@ -375,13 +375,15 @@ hanky pipe [-h] [-m MODEL] [--into DECK] [--fail-fast] [--dry-run] [--args K=V .
                 of skipping it and reporting it at the end.
   --dry-run     Run card processors and report what would happen, without
                 touching your Anki collection (no deck, media, cards, or backup added).
+  -v, --verbose Print each card's dictionary after all processors have been run 
+                alongside any errors in the final report.
   --args        key=value args forwarded to your card processors (scripts only).
 ```
 
 **`pipe-dir`** — pipe many files from a directory, deriving deck names from paths:
 
 ```
-hanky pipe-dir [-h] [-m MODEL] [-r] [--fail-fast] [--dry-run] [--args K=V ...] dir pattern
+hanky pipe-dir [-h] [-m MODEL] [-r] [--fail-fast] [--dry-run] [-v] [--args K=V ...] dir pattern
   dir              Directory to load from.
   pattern          Glob selecting files, e.g. "*.csv".
   -m, --model      Override the Anki model/note-type name to create cards with.
@@ -390,6 +392,8 @@ hanky pipe-dir [-h] [-m MODEL] [-r] [--fail-fast] [--dry-run] [--args K=V ...] d
                    of skipping it and reporting it at the end.
   --dry-run        Run card processors and report what would happen, without
                    touching your Anki collection (no deck, media, cards, or backup added).
+  -v, --verbose Print each card's dictionary after all processors have been run 
+                alongside any errors in the final report.
   --args           key=value args forwarded to your card processors (scripts only).
 ```
 
