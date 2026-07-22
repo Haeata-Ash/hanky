@@ -143,7 +143,7 @@ def generate_neural_speech(utf_8_str: str, voice: str) -> bytes:
 hanky = HankyPipeline("lang-vocab")
 
 
-@hanky.card_processor(expected_args=[], required_fields=["word"])
+@hanky.card_processor(required_fields=["word"])
 def add_translation(card: dict):
     """Look up the English 'word' on WordReference and write the French
     'translation' onto the card."""
@@ -151,7 +151,7 @@ def add_translation(card: dict):
     return card
 
 
-@hanky.card_processor(expected_args=["level"], required_fields=["word", "translation"])
+@hanky.card_processor(required_fields=["word", "translation"])
 def add_example(card: dict, level):
     """Generate a French example sentence at the CEFR 'level' from the
     'translation', writing the French sentence and its English gloss onto the
@@ -162,9 +162,7 @@ def add_example(card: dict, level):
     return card
 
 
-@hanky.card_processor(
-    expected_args=[], required_fields=["translation", "example-french"]
-)
+@hanky.card_processor(required_fields=["translation", "example-french"])
 def add_audio(card: dict):
     """Generate French speech for both the 'translation' and the
     'example-french' sentence, referencing the resulting anki media in the

@@ -177,7 +177,6 @@ class HankyPipeline:
     def register_card_processor(
         self,
         processor: Callable[[dict], dict],
-        expected_args: List[str] = [],
         required_fields: List[str] = [],
     ) -> None:
         """Adds a python callable to be called as a processor during a pipeline run.
@@ -191,17 +190,19 @@ class HankyPipeline:
         order in which they were registered.
 
         Args:
-            processor: the callable to apply to each card
-            expected_args: list of arguments expected by the callable
+            processor: the callable to apply to each card. Any parameters
+                declared on it beyond the card are automatically treated as
+                expected key word arguments - see
+                :class:`~hanky.processors.CardProcessor`.
             required_fields: list of fields expected to be present in the card
                 when the callable is applied
 
         Returns:
             None
         """
-        self.processors.append(CardProcessor(processor, expected_args, required_fields))
+        self.processors.append(CardProcessor(processor, required_fields))
 
-    def card_processor(self, expected_args: List[str], required_fields: List[str]):
+    def card_processor(self, required_fields: List[str] = []):
         """Decorator which automatically registers a card processor function
 
         A card processor takes a card (dictionary of field, value pairs) and any
@@ -216,13 +217,14 @@ class HankyPipeline:
         The decorated function will be called on every card each time the pipeline
         is run, whether via the CLI or the import_from_* methods. The first argument
         to the decorated function will always be the card data as a dictionary of
-        fields, value pairs.
+        fields, value pairs. Any further parameters it declares are automatically
+        treated as key word arguments passed in from the command line via
+        `--args key=value`: a parameter with no default is required, one with a
+        default is optional.
 
         The decorated function must return a dictionary.
 
         Args:
-            expected_args: list of named arguments expected by the card processor.
-                They will be passed in as key word arguments.
             required_fields: list of fields expected to be present in the card
                 when the card processor is called.
 
@@ -231,7 +233,7 @@ class HankyPipeline:
         """
 
         def decorator(func):
-            self.register_card_processor(func, expected_args, required_fields)
+            self.register_card_processor(func, required_fields)
             return func
 
         return decorator

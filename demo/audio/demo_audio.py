@@ -54,15 +54,13 @@ hanky.register_loader(".xlsx", excel_loader, is_text=False)
 
 # 1. Register the 'lang_model' function as a card processor on the pipeline
 #
-# 2. Define the cml arguments neccessary to be passed to hanky. 'lang' is used to
-# choose the language, i.e '--args lang=french'
+# 2. 'lang' is declared as a parameter on lang_model itself, so hanky picks it up
+# automatically as a cml argument, i.e '--args lang=french'
 #
 # 3. Define the fields that this card processor depends on. In this case 'native-lang'
 # and 'target-lang' fields are assumed to be in the card. They could already be present
 # in the file or set by a previous card processor
-@hanky.card_processor(
-    expected_args=["lang"], required_fields=["native-lang", "target-lang"]
-)
+@hanky.card_processor(required_fields=["native-lang", "target-lang"])
 def lang_model(card: dict, lang):
     """Generate the speech from the 'target-lang' field, add it as anki media then
     referenece it in 'target-lang-speech' field.

@@ -193,7 +193,7 @@ hanky = HankyPipeline(
 )
 
 
-@hanky.card_processor(expected_args=[], required_fields=["word"])
+@hanky.card_processor(required_fields=["word"])
 def scrape_translation(card: dict):
     """Get the English 'word' translations from WordReference, let the user pick
     one, and write it and its example sentence to the 'translation' and 'example'
@@ -207,7 +207,7 @@ def scrape_translation(card: dict):
     return card
 
 
-@hanky.card_processor(expected_args=[], required_fields=["translation"])
+@hanky.card_processor(required_fields=["translation"])
 def add_audio(card: dict):
     """Generate French speech for the 'translation' field and reference the
     resulting anki media in 'translation-audio'."""
