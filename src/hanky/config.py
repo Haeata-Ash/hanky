@@ -4,6 +4,8 @@ from pathlib import Path
 import platform
 import tomllib
 
+from hanky.errors import ConfigError
+
 
 def _get_system():
     return platform.system()
@@ -25,8 +27,8 @@ def _get_default_anki_db_path(system: str) -> str:
     elif system == "Darwin":
         return "~/Library/Application Support/Anki2/User 1/collection.anki2"
     else:
-        raise ValueError(
-            """Only linux and MacOS systems have a default anki database/collection path. 
+        raise ConfigError(
+            """Only linux and MacOS systems have a default anki database/collection path.
             Please specify path to anki db."""
         )
 
@@ -56,10 +58,22 @@ class Config:
 
         Returns:
             Config object
+
+        Raises:
+            ConfigError: the file is not valid TOML, or contains a key that
+                is not a recognised configuration option.
         """
 
         with open(fpath, "rb") as f:
-            return Config(**tomllib.load(f))
+            try:
+                data = tomllib.load(f)
+            except tomllib.TOMLDecodeError as e:
+                raise ConfigError(f"Could not parse config file '{fpath}': {e}") from e
+
+        try:
+            return Config(**data)
+        except TypeError as e:
+            raise ConfigError(f"Invalid config file '{fpath}': {e}") from e
 
     def update(self, **kwargs) -> "Config":
         return dataclasses.replace(self, **kwargs)

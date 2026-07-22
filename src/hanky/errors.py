@@ -2,6 +2,10 @@ class HankyError(Exception):
     """Base class for errors Hanky raises for expected, user-facing conditions."""
 
 
+class ConfigError(HankyError):
+    """Raised when hanky configuration cannot be loaded or is invalid."""
+
+
 class CollectionInUseError(HankyError):
     """Raised when another process holds a handle to the anki collection."""
 
