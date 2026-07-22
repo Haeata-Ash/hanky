@@ -178,7 +178,7 @@ class HankyPipeline:
         self,
         processor: Callable[[dict], dict],
         expected_args: List[str] = [],
-        card_fields: List[str] = [],
+        required_fields: List[str] = [],
     ) -> None:
         """Adds a python callable to be called as a processor during a pipeline run.
 
@@ -193,15 +193,15 @@ class HankyPipeline:
         Args:
             processor: the callable to apply to each card
             expected_args: list of arguments expected by the callable
-            card_fields: list of fields expected to be present in the card
+            required_fields: list of fields expected to be present in the card
                 when the callable is applied
 
         Returns:
             None
         """
-        self.processors.append(CardProcessor(processor, expected_args, card_fields))
+        self.processors.append(CardProcessor(processor, expected_args, required_fields))
 
-    def card_processor(self, expected_args: List[str], card_fields: List[str]):
+    def card_processor(self, expected_args: List[str], required_fields: List[str]):
         """Decorator which automatically registers a card processor function
 
         A card processor takes a card (dictionary of field, value pairs) and any
@@ -223,7 +223,7 @@ class HankyPipeline:
         Args:
             expected_args: list of named arguments expected by the card processor.
                 They will be passed in as key word arguments.
-            card_fields: list of fields expected to be present in the card
+            required_fields: list of fields expected to be present in the card
                 when the card processor is called.
 
         Returns:
@@ -231,7 +231,7 @@ class HankyPipeline:
         """
 
         def decorator(func):
-            self.register_card_processor(func, expected_args, card_fields)
+            self.register_card_processor(func, expected_args, required_fields)
             return func
 
         return decorator

@@ -61,7 +61,7 @@ hanky.register_loader(".xlsx", excel_loader, is_text=False)
 # and 'target-lang' fields are assumed to be in the card. They could already be present
 # in the file or set by a previous card processor
 @hanky.card_processor(
-    expected_args=["lang"], card_fields=["native-lang", "target-lang"]
+    expected_args=["lang"], required_fields=["native-lang", "target-lang"]
 )
 def lang_model(card: dict, lang):
     """Generate the speech from the 'target-lang' field, add it as anki media then

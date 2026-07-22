@@ -48,7 +48,7 @@ def define(word: str) -> str:
 hanky = HankyPipeline("basic")
 
 
-@hanky.card_processor(expected_args=[], card_fields=["Front"])
+@hanky.card_processor(expected_args=[], required_fields=["Front"])
 def define_word(card: dict):
     """Set the back of each card to the definition of the word on the front"""
     card["Back"] = define(card["Front"])
