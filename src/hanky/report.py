@@ -1,19 +1,26 @@
+import pprint
+import textwrap
 from dataclasses import dataclass, field, replace
-from typing import Any, List, Optional
+from typing import Any, List, Literal, Optional
+
+CardStatus = Literal["added", "skipped", "failed"]
 
 
 @dataclass(frozen=True)
-class CardError:
-    """A single card that could not be added during a load operation.
+class CardRecord:
+    """A single card processed during a load operation.
 
     Attributes:
-        card: the card data
-        error: a human readable description of what went wrong.
-        source: where the card came from, if known
+        card: the card data.
+        status: one of "added", "skipped" or "failed".
+        detail: a human readable description of what went wrong. Only set
+            when ``status`` is "failed".
+        source: where the card came from, if known.
     """
 
     card: Any
-    error: str
+    status: CardStatus
+    detail: Optional[str] = None
     source: Optional[str] = None
 
 
@@ -24,12 +31,20 @@ class LoadReport:
     Attributes:
         added: number of cards added to the collection.
         skipped: number of cards skipped because they were duplicates.
-        errors: the cards that could not be added, with their reasons.
+        records: the individual cards that were processed. Failed cards are
+            always recorded; added/skipped cards only when verbose reporting
+            was requested, since keeping every card's data around is wasted
+            work otherwise.
     """
 
     added: int = 0
     skipped: int = 0
-    errors: List[CardError] = field(default_factory=list)
+    records: List[CardRecord] = field(default_factory=list)
+
+    @property
+    def errors(self) -> List[CardRecord]:
+        """The cards that could not be added, with their reasons."""
+        return [r for r in self.records if r.status == "failed"]
 
     @property
     def failed(self) -> int:
@@ -42,15 +57,15 @@ class LoadReport:
         return self.added + self.skipped + self.failed
 
     def with_source(self, source: str) -> "LoadReport":
-        """Return a copy with ``source`` stamped onto any errors missing one.
+        """Return a copy with ``source`` stamped onto any records missing one.
 
-        Lets a file based loader attribute in-memory errors to the file they
+        Lets a file based loader attribute in-memory records to the file they
         came from without the lower level import_from_source needing to know paths.
         """
         return LoadReport(
             self.added,
             self.skipped,
-            [replace(e, source=e.source or source) for e in self.errors],
+            [replace(r, source=r.source or source) for r in self.records],
         )
 
     def __add__(self, other: "LoadReport") -> "LoadReport":
@@ -60,5 +75,30 @@ class LoadReport:
         return LoadReport(
             self.added + other.added,
             self.skipped + other.skipped,
-            self.errors + other.errors,
+            self.records + other.records,
         )
+
+
+def _format_card(card: Any) -> str:
+    """Pretty print a card dict, indented as a block under its label line."""
+    return textwrap.indent(pprint.pformat(card, sort_dicts=False), "    ")
+
+
+def print_report(report: LoadReport, verbose: bool = False) -> None:
+    """Print a human readable summary of a load operation to stdout.
+
+    Failed cards are always listed with their error. When ``verbose`` is
+    set, every card (added, skipped or failed) is also pretty printed.
+    """
+    print(
+        f"Added {report.added}, skipped {report.skipped}, "
+        f"failed {report.failed} (of {report.total} cards)."
+    )
+    for record in report.records:
+        if record.status != "failed" and not verbose:
+            continue
+        where = f" {record.source}" if record.source else ""
+        detail = f": {record.detail}" if record.detail else ""
+        print(f"  [{record.status}]{where}{detail}")
+        if verbose:
+            print(_format_card(record.card))

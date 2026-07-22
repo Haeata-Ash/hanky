@@ -1,13 +1,13 @@
 import json
 
-from hanky.report import CardError, LoadReport
+from hanky.report import CardRecord, LoadReport
 
 
 def test_failed_and_total_are_derived_from_the_buckets():
     report = LoadReport(
         added=3,
         skipped=1,
-        errors=[CardError(card={"Front": "x"}, error="boom")],
+        records=[CardRecord(card={"Front": "x"}, status="failed", detail="boom")],
     )
 
     assert report.failed == 1
@@ -15,34 +15,67 @@ def test_failed_and_total_are_derived_from_the_buckets():
 
 
 def test_reports_compose_with_addition():
-    a = LoadReport(added=1, skipped=1, errors=[CardError(card={}, error="a")])
-    b = LoadReport(added=2, skipped=0, errors=[CardError(card={}, error="b")])
+    a = LoadReport(
+        added=1,
+        skipped=1,
+        records=[CardRecord(card={}, status="failed", detail="a")],
+    )
+    b = LoadReport(
+        added=2,
+        skipped=0,
+        records=[CardRecord(card={}, status="failed", detail="b")],
+    )
 
     combined = a + b
 
     assert combined.added == 3
     assert combined.skipped == 1
-    assert [e.error for e in combined.errors] == ["a", "b"]
+    assert [e.detail for e in combined.errors] == ["a", "b"]
 
 
 def test_empty_report_is_an_additive_identity():
-    report = LoadReport(added=2, errors=[CardError(card={}, error="x")])
+    report = LoadReport(
+        added=2, records=[CardRecord(card={}, status="failed", detail="x")]
+    )
 
     assert (LoadReport() + report) == report
 
 
-def test_with_source_stamps_only_errors_that_lack_one():
+def test_with_source_stamps_only_records_that_lack_one():
     report = LoadReport(
-        errors=[
-            CardError(card={}, error="no source"),
-            CardError(card={}, error="keeps its own", source="other.csv"),
+        records=[
+            CardRecord(card={}, status="failed", detail="no source"),
+            CardRecord(
+                card={}, status="failed", detail="keeps its own", source="other.csv"
+            ),
         ]
     )
 
     stamped = report.with_source("french.csv")
 
-    assert stamped.errors[0].source == "french.csv"
-    assert stamped.errors[1].source == "other.csv"
+    assert stamped.records[0].source == "french.csv"
+    assert stamped.records[1].source == "other.csv"
+
+
+def test_reports_compose_records_with_addition():
+    a = LoadReport(records=[CardRecord(card={"Front": "a"}, status="added")])
+    b = LoadReport(records=[CardRecord(card={"Front": "b"}, status="skipped")])
+
+    combined = a + b
+
+    assert [r.card["Front"] for r in combined.records] == ["a", "b"]
+
+
+def test_errors_filters_records_to_only_failed_ones():
+    report = LoadReport(
+        records=[
+            CardRecord(card={"Front": "a"}, status="added"),
+            CardRecord(card={"Front": "b"}, status="skipped"),
+            CardRecord(card={"Front": "c"}, status="failed", detail="boom"),
+        ]
+    )
+
+    assert [e.card["Front"] for e in report.errors] == ["c"]
 
 
 def test_import_from_file_records_the_file_path_against_errors(app, tmp_path):

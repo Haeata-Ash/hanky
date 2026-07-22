@@ -82,7 +82,7 @@ def add_card(
     expected_fields = col.models.field_names(model)
     for k in expected_fields:
         if k not in fields:
-            raise KeyError(f"Expected field '{k}' is missing. {fields}")
+            raise KeyError(f"Expected field '{k}' is missing.")
 
     new_card = col.new_note(model)
 

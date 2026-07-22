@@ -62,6 +62,21 @@ def test_pipe_dir_dry_run_flag_parses():
     assert ns.dry_run is True
 
 
+def test_pipe_verbose_flag_parses():
+    ns = make_parser().parse_args(["pipe", "words.csv", "--verbose"])
+    assert ns.verbose is True
+
+
+def test_pipe_verbose_short_flag_parses():
+    ns = make_parser().parse_args(["pipe", "words.csv", "-v"])
+    assert ns.verbose is True
+
+
+def test_pipe_dir_verbose_flag_parses():
+    ns = make_parser().parse_args(["pipe-dir", "./french", "*.csv", "--verbose"])
+    assert ns.verbose is True
+
+
 def test_pipe_defaults_the_deck_to_the_filename(app, tmp_path):
     fpath = tmp_path / "French.csv"
     _write_csv(fpath, [("chien", "dog")])

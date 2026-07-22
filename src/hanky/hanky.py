@@ -25,7 +25,7 @@ from hanky.errors import (
 )
 from hanky.fs import DEFAULT_LOADERS, Loader, has_handle, make_file_loader
 from hanky.media import CardMedia
-from hanky.report import CardError, LoadReport
+from hanky.report import CardRecord, LoadReport, print_report
 
 _DEFAULT_CONFIG_PATH = Path("~/.config/hanky/hanky.toml").expanduser()
 
@@ -254,6 +254,7 @@ class HankyPipeline:
         deck_name: str,
         fail_fast: bool = False,
         dry_run: bool = False,
+        verbose: bool = False,
         **model_args,
     ) -> LoadReport:
         """Load cards from any iterable of dictionaries into a deck.
@@ -270,6 +271,9 @@ class HankyPipeline:
             dry_run: run card processors and build the report as normal, but
                 don't create the deck, write media, or add any cards. Duplicate
                 cards will not be found.
+            verbose: record every added/skipped card's dictionary on the
+                returned report (see :attr:`~hanky.report.LoadReport.records`),
+                for a caller to print or inspect.
             **model_args: arguments to provide to the card processor functions
 
         Returns:
@@ -292,7 +296,7 @@ class HankyPipeline:
 
             added = 0
             skipped = 0
-            errors: List[CardError] = []
+            records: List[CardRecord] = []
             for item in source:
                 try:
                     if not isinstance(item, Mapping):
@@ -310,6 +314,8 @@ class HankyPipeline:
                         for m in media:
                             m.replace_temp_refs(m.desired_name, card)
                         added += 1
+                        if verbose:
+                            records.append(CardRecord(card=card, status="added"))
                     else:
                         # TODO: we are leaving the media in the db even if the card
                         # isn't added
@@ -325,17 +331,23 @@ class HankyPipeline:
                             **card,
                         ):
                             added += 1
+                            if verbose:
+                                records.append(CardRecord(card=card, status="added"))
                         else:
                             skipped += 1
+                            if verbose:
+                                records.append(CardRecord(card=card, status="skipped"))
                 except Exception as e:
                     # inject model info into exception which processor doesn't know
                     if isinstance(e, CardProcessingException):
                         e.model = self._model
                     if fail_fast:
                         raise
-                    errors.append(CardError(card=item, error=str(e)))
+                    records.append(
+                        CardRecord(card=item, status="failed", detail=str(e))
+                    )
 
-            return LoadReport(added=added, skipped=skipped, errors=errors)
+            return LoadReport(added=added, skipped=skipped, records=records)
 
     def import_from_file(
         self,
@@ -343,6 +355,7 @@ class HankyPipeline:
         deck_name: Optional[str] = None,
         fail_fast: bool = False,
         dry_run: bool = False,
+        verbose: bool = False,
         **model_args,
     ) -> LoadReport:
         """Load cards from a file into a deck.
@@ -356,6 +369,7 @@ class HankyPipeline:
                 filename without its extension.
             fail_fast: raise on the first bad card instead of collecting it
             dry_run: see :meth:`import_from_source`
+            verbose: see :meth:`import_from_source`
             **model_args: arguments to provide to the card processor functions
 
         Returns:
@@ -369,7 +383,12 @@ class HankyPipeline:
 
         source = self.get_loader(path.suffix)(str(path))
         report = self.import_from_source(
-            source, deck_name, fail_fast=fail_fast, dry_run=dry_run, **model_args
+            source,
+            deck_name,
+            fail_fast=fail_fast,
+            dry_run=dry_run,
+            verbose=verbose,
+            **model_args,
         )
         return report.with_source(str(path))
 
@@ -380,6 +399,7 @@ class HankyPipeline:
         recursive=False,
         fail_fast: bool = False,
         dry_run: bool = False,
+        verbose: bool = False,
         **model_args,
     ) -> LoadReport:
         """Load cards from file(s) inside a directory.
@@ -408,6 +428,7 @@ class HankyPipeline:
             recursive: whether or not to descend into sub directories, defaults to false
             fail_fast: raise on the first bad card instead of collecting it
             dry_run: see :meth:`import_from_source`
+            verbose: see :meth:`import_from_source`
             **model_args: arguments to provide to the card processor functions
 
         Returns:
@@ -452,6 +473,7 @@ class HankyPipeline:
                         deck_name=full_deck,
                         fail_fast=fail_fast,
                         dry_run=dry_run,
+                        verbose=verbose,
                         **model_args,
                     )
 
@@ -498,6 +520,8 @@ def _run_app(app: HankyPipeline, args: Optional[Sequence[str]] = None):
         with app.session() as col:
             backup_collection(col, app.config.BACKUP_FOLDER)
 
+    verbose = parsed_args.verbose
+
     report = LoadReport()
     if parsed_args.operation == "pipe":
         print(f"Loading into deck {parsed_args.deck} from file {parsed_args.file}")
@@ -506,6 +530,7 @@ def _run_app(app: HankyPipeline, args: Optional[Sequence[str]] = None):
             deck_name=parsed_args.deck,
             fail_fast=parsed_args.fail_fast,
             dry_run=dry_run,
+            verbose=verbose,
             **model_args,
         )
 
@@ -517,18 +542,8 @@ def _run_app(app: HankyPipeline, args: Optional[Sequence[str]] = None):
             parsed_args.is_rec,
             fail_fast=parsed_args.fail_fast,
             dry_run=dry_run,
+            verbose=verbose,
             **model_args,
         )
 
-    _print_report(report)
-
-
-def _print_report(report: LoadReport) -> None:
-    """Print a human readable summary of a load operation to stdout."""
-    print(
-        f"Added {report.added}, skipped {report.skipped}, "
-        f"failed {report.failed} (of {report.total} cards)."
-    )
-    for err in report.errors:
-        where = f" [{err.source}]" if err.source else ""
-        print(f"  failed{where}: {err.error}")
+    print_report(report, verbose=verbose)
