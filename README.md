@@ -31,8 +31,9 @@ marked with a highlighter pen, and turns every highlighted word or phrase into a
 - [Loading from non-file sources](#loading-from-non-file-sources)
 - [Examples](#examples)
 - [CLI Reference](#cli-reference)
+- [Contributing](#contributing)
 - [Development](#development)
-- [Publishing](#publishing)
+- [Publishing](#publishing-for-me)
 
 ## Installation
 
@@ -134,8 +135,11 @@ ALLOW_DUPLICATES = false
 BACKUP_FOLDER = "~/.local/share/hanky/backups"
 ```
 
-#### 2. A `Config` object passed to `HankyPipeline(...)` in your script (takes precedence
-over the file). Useful if you want different config for different scripts:
+#### 2. A `Config` object passed to `HankyPipeline(...)` in your script 
+
+The object takes precedence over the file. 
+
+Useful if you want different config for different scripts:
 
 ```python
 from hanky import HankyPipeline
