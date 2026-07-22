@@ -31,6 +31,18 @@ def _add_dry_run(subparser):
     )
 
 
+def _add_verbose(subparser):
+    subparser.add_argument(
+        "-v",
+        "--verbose",
+        dest="verbose",
+        action="store_true",
+        default=False,
+        help="Print each card's dictionary as it is processed, and include "
+        "card dictionaries alongside errors in the final report.",
+    )
+
+
 def _add_model_override(subparser):
     subparser.add_argument(
         "-m",
@@ -76,6 +88,7 @@ def make_parser(has_card_processors=False):
     )
     _add_fail_fast(pipe)
     _add_dry_run(pipe)
+    _add_verbose(pipe)
     if has_card_processors:
         _add_processor_args(pipe)
 
@@ -99,6 +112,7 @@ def make_parser(has_card_processors=False):
     )
     _add_fail_fast(pipe_dir)
     _add_dry_run(pipe_dir)
+    _add_verbose(pipe_dir)
     if has_card_processors:
         _add_processor_args(pipe_dir)
 
