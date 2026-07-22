@@ -30,7 +30,7 @@ def test_import_from_source_reports_a_processor_error_with_the_model(app):
     report = app.import_from_source([{"Front": "chien", "Back": "dog"}], "French")
 
     assert report.failed == 1
-    assert "Basic" in report.errors[0].error
+    assert "Basic" in report.errors[0].detail
 
 
 def test_import_from_source_adds_every_card_from_the_source(app):
@@ -116,7 +116,7 @@ def test_import_from_source_collects_a_non_mapping_item_as_an_error(app, bad_ite
     assert report.added == 0
     assert report.failed == 1
     assert report.errors[0].card == bad_item
-    assert "dictionary" in report.errors[0].error
+    assert "dictionary" in report.errors[0].detail
 
 
 def test_import_from_source_continues_past_a_non_mapping_item(app):
