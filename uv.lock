@@ -354,7 +354,7 @@ dev = [
 
 [package.metadata]
 requires-dist = [
-    { name = "anki" },
+    { name = "anki", specifier = ">=24.4" },
     { name = "psutil" },
 ]
 
