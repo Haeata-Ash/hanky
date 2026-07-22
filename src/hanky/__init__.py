@@ -4,6 +4,7 @@ from .report import CardRecord as CardRecord
 from .report import LoadReport as LoadReport
 from .config import Config as Config
 from .errors import HankyError as HankyError
+from .errors import ConfigError as ConfigError
 from .errors import CollectionInUseError as CollectionInUseError
 from .errors import CollectionNotFoundError as CollectionNotFoundError
 from .errors import ModelNotFoundError as ModelNotFoundError
