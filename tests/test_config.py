@@ -3,6 +3,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from hanky.config import Config, _get_default_anki_db_path
+from hanky.errors import ConfigError
 
 
 @pytest.fixture(autouse=True, params=["Linux", "Darwin"])
@@ -76,8 +77,24 @@ def test_explicit_flags_override_defaults():
 
 
 def test_default_db_path_unsupported_platform_raises():
-    with pytest.raises(ValueError):
+    with pytest.raises(ConfigError):
         _get_default_anki_db_path("Windows")
+
+
+def test_from_toml_unknown_key_raises_config_error(tmp_path):
+    toml = tmp_path / "hanky.toml"
+    toml.write_text("TYPO_FIELD = true\n")
+
+    with pytest.raises(ConfigError, match="TYPO_FIELD"):
+        Config.from_toml(str(toml))
+
+
+def test_from_toml_invalid_syntax_raises_config_error(tmp_path):
+    toml = tmp_path / "hanky.toml"
+    toml.write_text("this is not = valid = toml\n")
+
+    with pytest.raises(ConfigError, match=str(toml)):
+        Config.from_toml(str(toml))
 
 
 def test_explicit_backup_folder_overrides_default():
