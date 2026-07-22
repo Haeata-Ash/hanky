@@ -253,6 +253,7 @@ class HankyPipeline:
         source: Iterable[Mapping],
         deck_name: str,
         fail_fast: bool = False,
+        dry_run: bool = False,
         **model_args,
     ) -> LoadReport:
         """Load cards from any iterable of dictionaries into a deck.
@@ -266,6 +267,9 @@ class HankyPipeline:
                 field names to values
             deck_name: the name of the destination deck
             fail_fast: raise on the first bad card instead of collecting it
+            dry_run: run card processors and build the report as normal, but
+                don't create the deck, write media, or add any cards. Duplicate
+                cards will not be found.
             **model_args: arguments to provide to the card processor functions
 
         Returns:
@@ -283,7 +287,8 @@ class HankyPipeline:
                     f"Model '{self._model}' does not exist in your anki collection. Ensure it has been added before using it with hanky."
                 )
 
-            add_deck(col, deck_name)
+            if not dry_run:
+                add_deck(col, deck_name)
 
             added = 0
             skipped = 0
@@ -301,22 +306,27 @@ class HankyPipeline:
                         card, new_media = t(card, **model_args)
                         media += new_media
 
-                    # TODO: we are leaving the media in the db even if the card
-                    # isn't added
-                    for m in media:
-                        actual_fname = add_media(col, m.data, m.desired_name)
-                        m.replace_temp_refs(actual_fname, card)
-
-                    if add_card(
-                        col,
-                        deck_name,
-                        self._model,
-                        allow_duplicates=self.config.ALLOW_DUPLICATES,
-                        **card,
-                    ):
+                    if dry_run:
+                        for m in media:
+                            m.replace_temp_refs(m.desired_name, card)
                         added += 1
                     else:
-                        skipped += 1
+                        # TODO: we are leaving the media in the db even if the card
+                        # isn't added
+                        for m in media:
+                            actual_fname = add_media(col, m.data, m.desired_name)
+                            m.replace_temp_refs(actual_fname, card)
+
+                        if add_card(
+                            col,
+                            deck_name,
+                            self._model,
+                            allow_duplicates=self.config.ALLOW_DUPLICATES,
+                            **card,
+                        ):
+                            added += 1
+                        else:
+                            skipped += 1
                 except Exception as e:
                     # inject model info into exception which processor doesn't know
                     if isinstance(e, CardProcessingException):
@@ -332,6 +342,7 @@ class HankyPipeline:
         fpath: str,
         deck_name: Optional[str] = None,
         fail_fast: bool = False,
+        dry_run: bool = False,
         **model_args,
     ) -> LoadReport:
         """Load cards from a file into a deck.
@@ -344,6 +355,7 @@ class HankyPipeline:
             deck_name: Optionally the name of the deck. Defaults to the
                 filename without its extension.
             fail_fast: raise on the first bad card instead of collecting it
+            dry_run: see :meth:`import_from_source`
             **model_args: arguments to provide to the card processor functions
 
         Returns:
@@ -357,7 +369,7 @@ class HankyPipeline:
 
         source = self.get_loader(path.suffix)(str(path))
         report = self.import_from_source(
-            source, deck_name, fail_fast=fail_fast, **model_args
+            source, deck_name, fail_fast=fail_fast, dry_run=dry_run, **model_args
         )
         return report.with_source(str(path))
 
@@ -367,6 +379,7 @@ class HankyPipeline:
         glob_pattern: str,
         recursive=False,
         fail_fast: bool = False,
+        dry_run: bool = False,
         **model_args,
     ) -> LoadReport:
         """Load cards from file(s) inside a directory.
@@ -394,6 +407,7 @@ class HankyPipeline:
             glob_pattern: A glob pattern such as '*.csv' to match the desired files
             recursive: whether or not to descend into sub directories, defaults to false
             fail_fast: raise on the first bad card instead of collecting it
+            dry_run: see :meth:`import_from_source`
             **model_args: arguments to provide to the card processor functions
 
         Returns:
@@ -437,6 +451,7 @@ class HankyPipeline:
                         str(abs_path),
                         deck_name=full_deck,
                         fail_fast=fail_fast,
+                        dry_run=dry_run,
                         **model_args,
                     )
 
@@ -444,12 +459,10 @@ class HankyPipeline:
 
     def run(self) -> None:
         """Run the HankyPipeline object as a CLI application. This method
-        performs a backup of the current anki collection.
+        performs a backup of the current anki collection, unless run with
+        ``--dry-run``.
 
         """
-        with self.session() as col:
-            backup_collection(col, self.config.BACKUP_FOLDER)
-
         _run_app(self)
 
 
@@ -478,6 +491,13 @@ def _run_app(app: HankyPipeline, args: Optional[Sequence[str]] = None):
     if parsed_args.model is not None:
         app._model = parsed_args.model
 
+    dry_run = parsed_args.dry_run
+    if dry_run:
+        print("Dry run: no changes will be made to your anki collection.")
+    else:
+        with app.session() as col:
+            backup_collection(col, app.config.BACKUP_FOLDER)
+
     report = LoadReport()
     if parsed_args.operation == "pipe":
         print(f"Loading into deck {parsed_args.deck} from file {parsed_args.file}")
@@ -485,6 +505,7 @@ def _run_app(app: HankyPipeline, args: Optional[Sequence[str]] = None):
             parsed_args.file,
             deck_name=parsed_args.deck,
             fail_fast=parsed_args.fail_fast,
+            dry_run=dry_run,
             **model_args,
         )
 
@@ -495,6 +516,7 @@ def _run_app(app: HankyPipeline, args: Optional[Sequence[str]] = None):
             parsed_args.pattern,
             parsed_args.is_rec,
             fail_fast=parsed_args.fail_fast,
+            dry_run=dry_run,
             **model_args,
         )
 
