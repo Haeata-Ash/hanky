@@ -1,5 +1,5 @@
 [build-system]
-requires = ["hatchling"]
+requires = ["hatchling", "hatch-vcs"]
 build-backend = "hatchling.build"
 
 [project]
@@ -16,12 +16,13 @@ classifiers = [
 ]
 
 keywords = ["anki"]
-version = "0.3.0.dev6"
 
 dependencies = [
   "anki",
   "psutil",
 ]
+
+dynamic = ["version"]
 
 [project.scripts]
 hanky = "hanky.__main__:main"
@@ -44,6 +45,9 @@ dev = [
 
 [tool.uv]
 default-groups = "all"
+
+[tool.hatch.version]
+source = "vcs"
 
 [tool.hatch.build.targets.sdist]
 exclude = [
