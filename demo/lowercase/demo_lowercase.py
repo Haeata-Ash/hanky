@@ -5,7 +5,7 @@ from hanky import HankyPipeline
 hanky = HankyPipeline("basic")
 
 
-@hanky.card_processor(expected_args=[], required_fields=[])
+@hanky.card_processor(required_fields=[])
 def lowercase_card(card: dict):
     """Lower-case the text on every field of the card."""
     return {field: value.lower() for field, value in card.items()}
