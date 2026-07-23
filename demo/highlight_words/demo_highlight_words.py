@@ -85,6 +85,7 @@ from google.auth.exceptions import DefaultCredentialsError
 from google.cloud import translate_v2
 from PIL import Image, ImageOps
 from rapidocr import LangRec, ModelType, OCRVersion, RapidOCR
+from skimage.filters import threshold_sauvola
 import matplotlib.pyplot as plt
 from hanky import HankyPipeline
 from spacy.matcher import PhraseMatcher
@@ -113,45 +114,62 @@ def display_image(image, title="Image", cmap=None):
     plt.show()
 
 
+def normalize_illumination(gray: np.ndarray) -> np.ndarray:
+    """Flat-field correction by dividing out a smooth illumination estimate,
+    so shadowed and lit text end up with comparable contrast. Subtracting
+    didn't really work super well for anything that wasn't a nice smooth gradual
+    shadow. Supposedly because shadows can be considered as multiplicative shading..."""
+    short_side = min(gray.shape[:2])
+
+    # Kernel size for the background estimate, in pixels. It has to be:
+    #   - bigger than a character's stroke width, so dilate() erases the
+    #     text entirely and what's left approximates "page + lighting"
+    #     with no ink left in it
+    #   - smaller than the spatial scale a shadow's edge moves across, so
+    #     the estimate still tracks *where* the shadow is rather than
+    #     blurring straight through it
+    # These magic numbers seemed to work so must be about right for a
+    # phone...
+    k = max(3, (short_side // 25) | 1)
+
+    # remove the text via dilation
+    dilated = cv2.dilate(gray, np.ones((k, k), np.uint8))
+    display_image(dilated, "dilated")
+
+    # make the image even smoother via a second, larger median blur. The
+    # magical numbers need give a kernel big enough to finish smoothing
+    # (so bigger than the previous dilation kernel) but not so big that
+    # seperate shadows on the page start being considered together.
+    bg = cv2.medianBlur(dilated, (k * 2) | 1)
+    display_image(bg, "background")
+
+    norm = gray.astype(np.float32) / (bg.astype(np.float32) + 1.0)
+
+    # Rescale back to 0-255 using the background's mean brightness as
+    # the reference "white point"
+    norm = np.clip(norm * bg.mean(), 0, 255).astype(np.uint8)
+    display_image(norm, "illumination normalised")
+    return norm
+
+
 def preprocess(img: np.ndarray):
     # convert to grayscale
     img_gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-    # display_image(img_gray, "gray")
+    display_image(img_gray, "gray")
 
     # gaussian blur to reduce noise
     blurred = cv2.GaussianBlur(img_gray, (5, 5), 0)
-    # display_image(blurred, "blurred")
+    display_image(blurred, "blurred")
 
-    dilated = cv2.dilate(blurred, np.ones((7, 7), np.uint8))
-    # display_image(dilated, "dilated")
+    corrected = normalize_illumination(blurred)
 
-    bg = cv2.medianBlur(dilated, 21)
-    # display_image(bg, "background")
+    sauvola_thresh = threshold_sauvola(corrected, window_size=25)
+    ink_mask = (corrected < sauvola_thresh).astype(
+        np.uint8
+    ) * 255  # ink is darker than its local threshold
+    display_image(ink_mask, "sauvola ink mask")
 
-    # Calculate the difference between the original and the background we just obtained.
-    # The bits that are identical will be black (close to 0 difference), the text will be white (large difference).
-    # Since we want black on white, we invert the result.
-    diff_img = 255 - cv2.absdiff(blurred, bg)
-
-    # Normalize background to [0, 255]
-    background_normalized = diff_img.copy()
-    background_normalized = cv2.normalize(
-        diff_img,
-        background_normalized,
-        alpha=0,
-        beta=255,
-        norm_type=cv2.NORM_MINMAX,
-        dtype=cv2.CV_8UC1,
-    )
-    # display_image(background_normalized, "background normalised")
-
-    _, img_thresh = cv2.threshold(
-        background_normalized, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU
-    )
-
-    # display_image(img_thresh, "threshold")
-
-    ink_pixels = cv2.findNonZero(img_thresh)
+    ink_pixels = cv2.findNonZero(ink_mask)
     angle = cv2.minAreaRect(ink_pixels)[2]
     if angle < -45:  # adjust angle
         angle = -(90 + angle)
@@ -163,7 +181,7 @@ def preprocess(img: np.ndarray):
     return cv2.warpAffine(
         img, rotation, (width, height), borderMode=cv2.BORDER_REPLICATE
     ), cv2.warpAffine(
-        img_thresh, rotation, (width, height), borderMode=cv2.BORDER_REPLICATE
+        corrected, rotation, (width, height), borderMode=cv2.BORDER_REPLICATE
     )
 
 
@@ -314,8 +332,8 @@ def load_photo_words_and_contexts(f_obj: IO):
     lines = [line for line in result.txts]
     text = " ".join(lines)
 
-    # make masks for highlighted areas
-    mask = create_highlighter_mask(img.copy())
+    # make masks for highlighted areas.
+    mask = create_highlighter_mask(rotated_img.copy())
 
     # pull out all text which highlighted
     higlighted_object_list = get_highlighted_text(result, mask)
