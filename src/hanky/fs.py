@@ -63,15 +63,35 @@ def make_file_loader(
 
 
 def has_handle(fpath: str) -> bool:
-    """Check if another process has a handle for a given file"""
+    """Check if another process has a handle for a given file.
+
+    A process whose open files can't be read (e.g. it belongs to
+    another user, or exited mid-scan) is silently skipped, since
+    that's expected and usually harmless. If no processes are
+    readable an error is raised as its likely that the check
+    provides no safety at all.
+
+    Raises:
+        RuntimeError: *every* process turned out to be unreadable, so the
+            scan checked nothing at all.
+    """
     path: Path = Path(fpath).expanduser().absolute()
+    checked_any = False
     for proc in psutil.process_iter():
         try:
             for item in proc.open_files():
                 if str(path) == str(item.path):
                     return True
+            checked_any = True
         except psutil.Error:
             pass
+
+    if not checked_any:
+        raise RuntimeError(
+            "Could not inspect any running process's open files, so it "
+            f"could not be determined whether another process has '{path}' "
+            "open."
+        )
 
     return False
 

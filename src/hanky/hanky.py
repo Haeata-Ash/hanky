@@ -100,8 +100,10 @@ class HankyPipeline:
         **The collection must be closed** with :meth:`_close_collection`, since
         it opens an sqlite db conn under the hood
 
-        First access will raise an error if another processes has a handle for the
-        collection AND the hanky process has the neccessary permissions to see the handle.
+        First access will raise an error if another process has a handle for
+        the collection, or if hanky lacks the permissions to check for one at
+        all (in which case it refuses to open the collection rather than
+        assume it's safe to do so).
         """
         if not self._col:
             db_path = Path(self.config.ANKI_DB_PATH).expanduser().absolute()
@@ -112,7 +114,19 @@ class HankyPipeline:
                 )
 
             if self.config.DO_SAFETY_CHECK:
-                if has_handle(self.config.ANKI_DB_PATH):
+                try:
+                    in_use = has_handle(self.config.ANKI_DB_PATH)
+                except RuntimeError as e:
+                    raise CollectionInUseError(
+                        f"Could not verify that no other process has the anki "
+                        f"collection open ({e}). Refusing to open it, since "
+                        f"doing so while another process (e.g. Anki itself) "
+                        f"has it open risks database corruption. Set "
+                        f"DO_SAFETY_CHECK=false in your config to bypass this "
+                        f"check."
+                    ) from e
+
+                if in_use:
                     raise CollectionInUseError(
                         "At least one other process is using the anki database. "
                         "Ensure the Anki application is closed before using Hanky "
