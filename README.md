@@ -1,19 +1,17 @@
 # hanky: A CLI Application For Generating Anki Decks
 
-[![Hatch project](https://img.shields.io/badge/%F0%9F%A5%9A-Hatch-4051b5.svg)](https://github.com/pypa/hatch)
-
 Hanky is an extendable cli tool which reads flash cards from files, transforms them, then adds them to
 Anki.
 
-For example, a single hanky pipeline might take english words and:
+For example, a single hanky pipeline might:
 
-1. scrape a French translation and example sentence from a dictionary site, then
-2. generate spoken audio of that translation with a text-to-speech service,
+1. use computer vision to pull highlighted words from a printed French text, then
+2. translate each word and its sentence to English using a translation service, then
+3. generate spoken French audio of the sentence with a text-to-speech service,
 
-turning a list of words into rich flash cards with native speech and examples.
+turning class texts into rich flash cards with native speech and examples.
 
-Checkout the [computer vision pipeline demo](https://github.com/Haeata-Ash/hanky/blob/main/demo/highlight_words/demo_highlight_words.py) for a more involved example which loads a photograph of printed French text that you have 
-marked with a highlighter pen, and turns every highlighted word or phrase into a flash card with the sentence it appeared in as context.
+Checkout the [computer vision pipeline demo](https://github.com/Haeata-Ash/hanky/blob/main/demo/highlight_words/demo_highlight_words.py) for the complete example.
 
 
 *Hanky is not affiliated or associated with the [Anki application/org](https://apps.ankiweb.net/).*
@@ -43,7 +41,7 @@ pip install hanky
 
 ## Quickstart
 
-You extend hanky in your own python script `my_script.py` by writing functions called **card processors**. These functions contain the logic to transform cards. Hanky then handles the cli interface, calling your processors, and finally adding the cards to anki.
+You extend hanky in your own python script, `my_script.py`, by writing functions called **card processors**. These functions contain the logic to transform cards. Hanky then handles the cli interface, calling your processors, and finally adding the cards to anki.
 
 To illustrate what this looks like, we will create a simple hanky script which ensures all the text on a card is lower case.
 
@@ -102,22 +100,23 @@ This would leave us with a **english::vocab** deck containing the following card
 
 
 > **Note:** hanky only *adds* cards, media, and decks. The Anki **models/note types**
-> you load into must already exist in your collection — create them in Anki's UI
+> you load into must already exist in your collection. Create them in Anki's UI
 > first. See [Adding a Note Type](https://docs.ankiweb.net/editing.html#adding-a-note-type).
 
 
 ## Configuration
 
-There are two ways to configure Hanky; via a configuration file or via a configuration object. 
+Configure Hanky via a configuration file or via a configuration object. 
 
-**You will only need configuration if you do not use the default Anki profile (`User 1`).**
+**You will only need configuration if you do not use the default Anki profile (`User 1`) or you are on windows**
 
 
-#### 1. Via TOML file at `~/.config/hanky/hanky.toml` (loaded automatically if present):
+#### 1. Via TOML file at `~/.config/hanky/hanky.toml`:
 
 ```toml
 # Path to the Anki collection (the sqlite db Anki stores cards in).
-# Required only if you do NOT use the default profile, "User 1".
+# Required only if you do NOT use the default profile, "User 1"
+# or you use Windows.
 # Defaults:
 #   Linux:  ~/.local/share/Anki2/User 1/collection.anki2
 #   macOS:  ~/Library/Application Support/Anki2/User 1/collection.anki2
@@ -135,15 +134,12 @@ ALLOW_DUPLICATES = false
 BACKUP_FOLDER = "~/.local/share/hanky/backups"
 ```
 
-#### 2. A `Config` object passed to `HankyPipeline(...)` in your script 
+#### 2. A `Config` object passed to `HankyPipeline(...)`
 
 The object takes precedence over the file. 
 
-Useful if you want different config for different scripts:
-
 ```python
-from hanky import HankyPipeline
-from hanky.config import Config
+from hanky import HankyPipeline, Config
 
 hanky = HankyPipeline("basic", config=Config(ALLOW_DUPLICATES=True))
 ```
@@ -172,14 +168,14 @@ For example, you might have the same pipeline for different languages, so you wo
 my_processor(card, lang="german")
 ```
 
-`required_fields` defines which fields **must already be present** on the card when this processor runs. Hanky checks this and raises a clear error if one is missing. It lets a processor declare what an *earlier* step must have produced.
+`required_fields` defines which fields **must already be present** on the card when this processor runs. Hanky checks this and raises an error if one is missing. It lets a processor declare what an *earlier* step must have produced.
 
 
 A processor must **return** one of:
 
-- `card` — the (modified) dict, when it adds no media;
-- `(card, media)` — a card plus a single [`CardMedia`](#attaching-media);
-- `(card, [media, ...])` — a card plus a list of media.
+- `card`: the (modified) dict, when it adds no media;
+- `(card, media)`: a card plus a single [`CardMedia`](#attaching-media);
+- `(card, [media, ...])`: a card plus a list of media.
 
 Whatever changes a processor makes to a `card` become visible to every processor
 that runs after it.
@@ -322,24 +318,24 @@ from simplest to most involved. Each demo lives in its own folder with a
 `requirements.txt` listing just its dependencies; install them with, e.g.,
 `pip install -r demo/scrape/requirements.txt`.
 
-- [`demo_lowercase.py`](https://github.com/Haeata-Ash/hanky/blob/main/demo/lowercase/demo_lowercase.py) — The minimal example: a single,
+- [`demo_lowercase.py`](https://github.com/Haeata-Ash/hanky/blob/main/demo/lowercase/demo_lowercase.py): The minimal example: a single,
   dependency-free processor that lower-cases every field on a card.
-- [`demo_random_words.py`](https://github.com/Haeata-Ash/hanky/blob/main/demo/random_words/demo_random_words.py) — A non-file source: builds
+- [`demo_random_words.py`](https://github.com/Haeata-Ash/hanky/blob/main/demo/random_words/demo_random_words.py): A non-file source: builds
   cards from an in-script word list and adds them with `import_from_source`.
-- [`demo_define.py`](https://github.com/Haeata-Ash/hanky/blob/main/demo/define/demo_define.py) — A single processor that fills the
+- [`demo_define.py`](https://github.com/Haeata-Ash/hanky/blob/main/demo/define/demo_define.py): A single processor that fills the
   back of each card with a dictionary definition of the word on its front,
   looked up offline via WordNet (NLTK).
-- [`demo_audio.py`](https://github.com/Haeata-Ash/hanky/blob/main/demo/audio/demo_audio.py) — Registers a custom `.xlsx` loader and uses AWS
+- [`demo_audio.py`](https://github.com/Haeata-Ash/hanky/blob/main/demo/audio/demo_audio.py): Registers a custom `.xlsx` loader and uses AWS
   Polly to attach text-to-speech audio, choosing the language from a CLI
   argument (`--args lang=french`).
-- [`demo_scrape.py`](https://github.com/Haeata-Ash/hanky/blob/main/demo/scrape/demo_scrape.py) — A two-stage English→French pipeline
+- [`demo_scrape.py`](https://github.com/Haeata-Ash/hanky/blob/main/demo/scrape/demo_scrape.py): A two-stage English→French pipeline
   that scrapes a translation and example sentence from WordReference, then
   voices the translation with AWS Polly.
-- [`demo_example_sentences.py`](https://github.com/Haeata-Ash/hanky/blob/main/demo/example_sentences/demo_example_sentences.py) — A three-stage
+- [`demo_example_sentences.py`](https://github.com/Haeata-Ash/hanky/blob/main/demo/example_sentences/demo_example_sentences.py): A three-stage
   English→French pipeline that scrapes a translation from WordReference, asks
   Claude for an example sentence at a given CEFR level, then adds French audio
   for both the word and the sentence with AWS Polly.
-- [`demo_highlight_words.py`](https://github.com/Haeata-Ash/hanky/blob/main/demo/highlight_words/demo_highlight_words.py) — A
+- [`demo_highlight_words.py`](https://github.com/Haeata-Ash/hanky/blob/main/demo/highlight_words/demo_highlight_words.py): A
   computer-vision based pipeline which loads a photograph of printed French text you've marked with
   a highlighter pen, and turns every highlighted word or phrase into a flash card with
   the sentence it appeared in as context. 
@@ -356,7 +352,7 @@ Note that cards are created with the model set on the pipeline (`HankyPipeline("
 Since standalone `hanky` command has no script of its own, it uses Anki's built-in 
 `Basic` model unless you override it.
 
-**`pipe`** — pipe cards from a single file into a deck:
+**`pipe`**: pipe cards from a single file into a deck:
 
 ```
 hanky pipe [-h] [-m MODEL] [--into DECK] [--fail-fast] [--dry-run] [-v] [--args K=V ...] file
@@ -372,7 +368,7 @@ hanky pipe [-h] [-m MODEL] [--into DECK] [--fail-fast] [--dry-run] [-v] [--args 
   --args        key=value args forwarded to your card processors (scripts only).
 ```
 
-**`pipe-dir`** — pipe many files from a directory, deriving deck names from paths:
+**`pipe-dir`**: pipe many files from a directory, deriving deck names from paths:
 
 ```
 hanky pipe-dir [-h] [-m MODEL] [-r] [--fail-fast] [--dry-run] [-v] [--args K=V ...] dir pattern
