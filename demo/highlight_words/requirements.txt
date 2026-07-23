@@ -1,11 +1,11 @@
 hanky
 google-cloud-translate
+google-cloud-texttospeech
 numpy
 onnxruntime
 opencv-python-headless
 pillow
 rapidocr
-scikit-image
 spacy
 matplotlib
 pyqt6
