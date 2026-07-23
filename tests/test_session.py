@@ -28,6 +28,22 @@ def test_col_raises_when_in_use_by_another_process(tmp_path, monkeypatch):
         _ = app._open_collection()
 
 
+def test_col_raises_when_safety_check_cannot_be_performed(tmp_path, monkeypatch):
+    db_path = tmp_path / "collection.anki2"
+    db_path.touch()
+    app = HankyPipeline(
+        "Basic", config=Config(ANKI_DB_PATH=str(db_path), DO_SAFETY_CHECK=True)
+    )
+
+    def _raise(_):
+        raise RuntimeError("could not be determined")
+
+    monkeypatch.setattr("hanky.hanky.has_handle", _raise)
+
+    with pytest.raises(CollectionInUseError, match="Could not verify"):
+        _ = app._open_collection()
+
+
 def test_nested_sessions_keep_the_collection_open_until_the_outer_scope_exits(app):
     # start from a closed collection so the outermost session is the opener
     app._close_collection()
