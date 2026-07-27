@@ -16,7 +16,7 @@ def test_supported_audio_extensions_ref():
     data = b"some-audio-bytes"
 
     media = CardMedia(data, ".mp3")
-    the_ref = f"[sound:{media._temp_ref_uuid}]"
+    the_ref = f"[sound:{media.desired_name}]"
     assert media.media_ref == the_ref
 
 
@@ -25,11 +25,20 @@ def test_unsupported_extension_raises():
         CardMedia(b"data", ".png")
 
 
-def test_temp_ref_is_unique_per_instance_even_for_identical_data():
+def test_ref_is_shared_between_instances_holding_identical_data():
+    """Identical media must produce identical references, so that two cards
+    carrying the same audio look identical to anki's duplicate detection."""
     a = CardMedia(b"same", ".mp3")
     b = CardMedia(b"same", ".mp3")
 
-    assert a._temp_ref_uuid != b._temp_ref_uuid
+    assert a.media_ref == b.media_ref
+
+
+def test_ref_differs_between_instances_holding_different_data():
+    a = CardMedia(b"one", ".mp3")
+    b = CardMedia(b"two", ".mp3")
+
+    assert a.media_ref != b.media_ref
 
 
 def test_from_file_reads_bytes_and_extension(tmp_path):
@@ -42,30 +51,39 @@ def test_from_file_reads_bytes_and_extension(tmp_path):
     assert media.desired_name == hashlib.sha256(b"file-bytes").hexdigest() + ".mp3"
 
 
-def test_replace_temp_refs_substitutes_the_actual_name():
+def test_replace_refs_substitutes_the_actual_name():
     media = CardMedia(b"data", ".mp3")
     card = {"Front": "bonjour", "Back": media.media_ref}
 
-    media.replace_temp_refs("real_name.mp3", card)
+    media.replace_refs("real_name.mp3", card)
 
-    assert media._temp_ref_uuid not in card["Back"]
+    assert media.desired_name not in card["Back"]
     assert "real_name.mp3" in card["Back"]
 
 
-def test_replace_temp_refs_replaces_every_occurrence_in_a_field():
+def test_replace_refs_replaces_every_occurrence_in_a_field():
     media = CardMedia(b"data", ".mp3")
     card = {"Back": f"{media.media_ref} and again {media.media_ref}"}
 
-    media.replace_temp_refs("real_name.mp3", card)
+    media.replace_refs("real_name.mp3", card)
 
-    assert media._temp_ref_uuid not in card["Back"]
+    assert media.desired_name not in card["Back"]
     assert card["Back"].count("real_name.mp3") == 2
 
 
-def test_replace_temp_refs_leaves_unrelated_fields_untouched():
+def test_replace_refs_leaves_unrelated_fields_untouched():
     media = CardMedia(b"data", ".mp3")
     card = {"Front": "bonjour", "Back": media.media_ref}
 
-    media.replace_temp_refs("real_name.mp3", card)
+    media.replace_refs("real_name.mp3", card)
 
     assert card["Front"] == "bonjour"
+
+
+def test_replace_refs_is_a_no_op_when_anki_kept_the_desired_name():
+    media = CardMedia(b"data", ".mp3")
+    card = {"Front": "bonjour", "Back": media.media_ref}
+
+    media.replace_refs(media.desired_name, card)
+
+    assert card["Back"] == media.media_ref
