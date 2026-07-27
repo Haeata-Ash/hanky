@@ -33,6 +33,36 @@ def test_import_from_source_reports_a_processor_error_with_the_model(app):
     assert "Basic" in report.errors[0].detail
 
 
+def test_import_from_source_reports_why_a_processor_failed(app):
+    def scrape(card):
+        raise RuntimeError("api returned 503")
+
+    app.register_card_processor(scrape)
+
+    report = app.import_from_source([{"Front": "chien", "Back": "dog"}], "French")
+
+    assert report.failed == 1
+    assert "api returned 503" in report.errors[0].detail
+
+
+def test_report_distinguishes_two_cards_that_failed_for_different_reasons(app):
+    def scrape(card):
+        if card["Front"] == "chien":
+            raise RuntimeError("api returned 503")
+        raise ValueError("no translation found")
+
+    app.register_card_processor(scrape)
+
+    report = app.import_from_source(
+        [{"Front": "chien", "Back": "dog"}, {"Front": "chat", "Back": "cat"}], "French"
+    )
+
+    assert report.failed == 2
+    details = [r.detail for r in report.errors]
+    assert any("api returned 503" in d for d in details)
+    assert any("no translation found" in d for d in details)
+
+
 def test_import_from_source_adds_every_card_from_the_source(app):
     source = [
         {"Front": "bonjour", "Back": "hello"},
