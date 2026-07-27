@@ -13,7 +13,12 @@ from typing import (
 
 from anki.collection import Collection
 
-from hanky.anki_utils import add_card, add_deck, add_media, backup_collection
+from hanky.anki_utils import (
+    add_deck,
+    backup_collection,
+    commit_card_with_media,
+    prepare_card,
+)
 from hanky.processors import CardProcessingException, CardProcessor
 from hanky.cli import make_parser
 from hanky.config import Config
@@ -25,7 +30,7 @@ from hanky.errors import (
 )
 from hanky.fs import DEFAULT_LOADERS, Loader, has_handle, make_file_loader
 from hanky.media import CardMedia
-from hanky.report import CardRecord, LoadReport, print_report
+from hanky.report import CardRecord, CardStatus, LoadReport, print_report
 
 _DEFAULT_CONFIG_PATH = Path("~/.config/hanky/hanky.toml").expanduser()
 
@@ -320,6 +325,7 @@ class HankyPipeline:
                             f"Card source for model '{self._model}' yielded a "
                             f"{type(item).__name__}, expected a dictionary (mapping)."
                         )
+                    card_status: CardStatus = "added"
                     card = dict(item)
                     media: List[CardMedia] = []
                     for t in self.processors:
@@ -327,32 +333,31 @@ class HankyPipeline:
                         media += new_media
 
                     if dry_run:
-                        for m in media:
-                            m.replace_temp_refs(m.desired_name, card)
                         added += 1
-                        if verbose:
-                            records.append(CardRecord(card=card, status="added"))
+                        card_status = "added"
                     else:
-                        # TODO: we are leaving the media in the db even if the card
-                        # isn't added
-                        for m in media:
-                            actual_fname = add_media(col, m.data, m.desired_name)
-                            m.replace_temp_refs(actual_fname, card)
-
-                        if add_card(
+                        # settle everything that could reject this card before
+                        # writing any of its media
+                        prepared = prepare_card(
                             col,
                             deck_name,
                             self._model,
                             allow_duplicates=self.config.ALLOW_DUPLICATES,
                             **card,
-                        ):
-                            added += 1
-                            if verbose:
-                                records.append(CardRecord(card=card, status="added"))
-                        else:
+                        )
+
+                        if prepared.is_duplicate:
                             skipped += 1
-                            if verbose:
-                                records.append(CardRecord(card=card, status="skipped"))
+                            card_status = "skipped"
+                        else:
+                            commit_card_with_media(col, prepared, card, media)
+                            added += 1
+                            card_status = "added"
+
+                    # we only put added/skipped card content in report
+                    # with verbose
+                    if verbose:
+                        records.append(CardRecord(card, card_status))
                 except Exception as e:
                     # inject model info into exception which processor doesn't know
                     if isinstance(e, CardProcessingException):

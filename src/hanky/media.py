@@ -1,23 +1,20 @@
 import hashlib
 from pathlib import Path
-from uuid import uuid4
 
 
 class CardMedia:
     """Media that should be added to the anki database at the same time as a card.
 
-    It exposes a temporary reference which can be used as a stand in for the real one
-    eventually created by anki. Any usages of the temporary reference in a cards fields
-    will be replaced with the real one when it is added to the database.
+    The reference it exposes is the sha256 of the media's content (bytes). It **should**
+    be unique so **should** be the name anki will store the media under. Use :meth:`replace_refs`
+    to sanity check the case where anki uses a different name.
     """
 
     def __init__(self, data: bytes, ext: str) -> None:
         self.data = data
         self._ext = ext
-        self._ref = None
-        self._temp_ref_uuid = f"{uuid4().hex}{ext}"
-        self._media_ref = self._make_anki_ref()
         self.desired_name = self._make_desired_media_name()
+        self._media_ref = self._make_anki_ref()
 
     @classmethod
     def from_file(cls, filename: str):
@@ -47,21 +44,27 @@ class CardMedia:
         return False
 
     def _make_anki_sound_ref(self) -> str:
-        return f"[sound:{self._temp_ref_uuid}]"
+        return f"[sound:{self.desired_name}]"
 
-    def _make_desired_media_name(self):
+    def _make_desired_media_name(self) -> str:
         m = hashlib.sha256()
         m.update(self.data)
         return m.hexdigest() + self._ext
 
-    def replace_temp_refs(self, actual_name: str, card: dict[str, str]):
-        """Replace any occurences of the temporary media reference in a card
-        with the actual name.
+    def replace_refs(self, actual_name: str, card: dict[str, str]) -> None:
+        """Point any references to this media in a card at the name anki
+        actually stored it under.
+
+        Normally does nothing since the desired name is a hash of the media's
+        content, but it is possible that two cards will try to add the same media
+        file resulting in the same hash.
 
         Params:
             actual_name: The actual media name returned by anki when it was added to
                 the collection.
             card: the dictionary representing the anki card
         """
+        if actual_name == self.desired_name:
+            return
         for field in card:
-            card[field] = card[field].replace(self._temp_ref_uuid, actual_name)
+            card[field] = card[field].replace(self.desired_name, actual_name)
