@@ -221,6 +221,31 @@ def test_wrapped_exception_includes_card_context():
     assert exc_info.value.model is None
 
 
+def test_wrapped_exception_message_includes_the_root_cause():
+    def translate(card):
+        raise RuntimeError("api returned 503")
+
+    p = CardProcessor(translate, [])
+
+    with pytest.raises(CardProcessingException) as exc_info:
+        p({"Front": "chien"})
+
+    message = str(exc_info.value)
+
+    assert "api returned 503" in message
+    # and the context it already carries must not be lost in the process
+    assert "translate" in message
+    assert "chien" in message
+
+
+def test_exception_message_does_not_mention_an_absent_cause():
+    err = CardProcessingException(
+        lambda card: card, model="Basic", card={"Front": "chien"}
+    )
+
+    assert "None" not in str(err)
+
+
 def test_no_extra_params_yields_no_expected_or_optional_args():
     p = CardProcessor(lambda card: card, [])
 
