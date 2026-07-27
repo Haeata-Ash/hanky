@@ -37,7 +37,8 @@ class CardProcessingException(Exception):
     """Raised when a user-defined card processor raises during execution.
 
     Some info may not be known at construction so we default to None
-    and build string lazily.
+    and build string lazily. That includes the error that actually caused
+    the failure, which is read back off ``__cause__``
     """
 
     def __init__(self, processor, model=None, card=None, *args):
@@ -46,11 +47,30 @@ class CardProcessingException(Exception):
         self.card = card
         super().__init__(*args)
 
+    def _describe_cause(self) -> str:
+        """The underlying error, as 'Type: message'.
+
+        Empty when nothing is chained, since this exception carries no
+        failure of its own to describe.
+        """
+        cause = self.__cause__
+        if cause is None:
+            return ""
+        name = type(cause).__name__
+        # some exceptions (e.g. a bare `raise RuntimeError`) stringify to
+        # nothing, in which case the type alone is all there is to say
+        return f"{name}: {cause}" if str(cause) else name
+
     def __str__(self) -> str:
         name = getattr(self.processor, "__name__", repr(self.processor))
+        # the model is filled in by the pipeline after the fact, so it may
+        # legitimately be unknown here
+        model = f" for model '{self.model}'" if self.model is not None else ""
+        cause = self._describe_cause()
+        why = f": {cause}" if cause else ""
         return (
-            f"Error in card processor '{name}' for model '{self.model}' "
-            f"while processing card: {self.card}"
+            f"Error in card processor '{name}'{model}{why} "
+            f"(while processing card: {self.card})"
         )
 
 
