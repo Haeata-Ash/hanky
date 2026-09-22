@@ -51,7 +51,7 @@ class CardMedia:
         m.update(self.data)
         return m.hexdigest() + self._ext
 
-    def replace_refs(self, actual_name: str, card: dict[str, str]) -> None:
+    def replace_refs(self, actual_name: str, card: dict) -> None:
         """Point any references to this media in a card at the name anki
         actually stored it under.
 
@@ -66,5 +66,8 @@ class CardMedia:
         """
         if actual_name == self.desired_name:
             return
-        for field in card:
-            card[field] = card[field].replace(self.desired_name, actual_name)
+        for field, value in card.items():
+            # non-string values can't hold a reference, and are stringified
+            # when the card is written
+            if isinstance(value, str):
+                card[field] = value.replace(self.desired_name, actual_name)
