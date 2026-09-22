@@ -87,3 +87,12 @@ def test_replace_refs_is_a_no_op_when_anki_kept_the_desired_name():
     media.replace_refs(media.desired_name, card)
 
     assert card["Back"] == media.media_ref
+
+
+def test_replace_refs_leaves_non_string_fields_untouched():
+    media = CardMedia(b"data", ".mp3")
+    card = {"Front": media.media_ref, "Back": 1, "Extra": None}
+
+    media.replace_refs("real_name.mp3", card)
+
+    assert card == {"Front": "[sound:real_name.mp3]", "Back": 1, "Extra": None}
