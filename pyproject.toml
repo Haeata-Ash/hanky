@@ -17,8 +17,9 @@ classifiers = [
 
 keywords = ["anki"]
 
+# note anki uses cal ver YY.MM
 dependencies = [
-  "anki>=24.4",
+  "anki>=24.4,<27",
   "psutil",
 ]
 
